@@ -94,19 +94,18 @@
 \setlength{\parindent}{0em}
 \setlength{\parskip}{1.5ex plus0.5ex minus1.2ex}
 
-\section{新 model}
+和 Joseph Cheng 谈过之后，我提出进一步简化的新 model：
 
-和 Joseph Cheng 谈过之后，发觉进一步简化比较好：
+\section{放弃 sentence structure}
 
-\subsection{放弃 sentence structure}
+因为太麻烦了，增加了复杂性。  想像一个只能用单字说话的 baby，如果她将来够聪明的话，她可以学会用单字组成句子，但那要视乎她内部知识的增长。 这些语言方面的知识，我们不会 externally program 进去。 宁愿她开始时比较低能，也好过我们 design 到筋疲力尽。
 
-因为太麻烦了，增加复杂性。  想像一个只能用单字说话的 baby，如果她将来够聪明的话，她可以学会用单字组成句子，但那要视乎她内部知识的增长。 这些语言方面的知识，我们不会 externally program 进去。 宁愿她开始时比较低能，也好过我们 design 到筋疲力尽。
-
-回顾一下我们的 neural reasoner model：
+如果 Genifer 只会「出字」，例如听到「妈妈」会输出「喝奶」，那只是很简单的条件反射式动作。 关键是 Genifer 内部有这样的一个 neural reasoner：
 \begin{figure}[H]
 \centering
-\includegraphics[scale=0.75]{genifer-model-0.png}
+\includegraphics[scale=0.75]{reasoner-model.png}
 \end{figure}
+它有能力作出多个步骤的推理。
 
 新的 cognitive state vector $K$ 可以是这样的：
 \begin{figure}[H]
@@ -114,7 +113,7 @@
 \includegraphics[scale=0.75]{internal-state-K.png}
 \end{figure}
 
-$w_I$ 和 $w_O$ 分别是 Genifer 的「眼」和「口」。
+$w_I$ 和 $w_O$ 分别是 Genifer 的「眼」和「咀巴」。
 
 $w_I$ 可以是 word2vec 产生的 vector，这里我们只是利用 word2vec 输出的 representation，算法基本上是和 word2vec 无关的。
 
@@ -122,55 +121,45 @@ $w_O$ 是 reasoner 的输出，每当这部分变动时，我们就印出一个�
 
 $s$ 是「内部状态」，也可以叫 \,"working memory" （认知科学术语），也可以看成是 Turing machine 里的记忆磁带。 它记住当前的问题状态，$D$ 作用在 $K$ 之上，产生新的结论。
 
-\subsection{用 reinforcement learning 控制 logic reasoner}
+{\small 注： 我对中文智能输入法也有兴趣，这里 $w_I$ 可以是键盘字母，$w_O$ 是词语 suggestions 或 auto-complete。}
 
-好处是不需人手。 
+\section{用 reinforcement learning (RL) 控制 reasoner}
 
+Richard Sutton （强化学习方面的领先研究者）说，RL 应该是人工智能系统的 top-level architecture，我也赞同这点。\footnote{可以参看我在博客上写的 \href{http://geniferology.blogspot.hk/2015/04/what-is-reinforcement-learning.html}{什么是强化学习？}}
 
+整个 Genifer 系统是这样的：
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.75]{genifer-model-0.png}
+\end{figure}
 
-$D$ 不变，$K_0$ 是已知的，求 $K_\infty$：
-$$ K_0 \stackrel{D}{\longrightarrow} K_1 \stackrel{D}{\longrightarrow} .... \; K_\infty $$
+设计一个 RL 系统只需定义 4 个元素： \{ 状态 (states)、行动 (actions)、奖励 (rewards)、方案 (policy) \}，其中 policy 是由算法自动计算出来的 states $\rightarrow$ actions 函数。
 
-\begin{eqnarray}
-K_0 & \stackrel{D}{\longrightarrow} & .... \; K_\infty \nonumber \\
-\mbox{error } \mathcal{E} & = & K_\infty - K^* \nonumber \\
-\mbox{minimize error, with gradient} & = & \frac{\partial \mathcal{E}}{\partial D} \nonumber
-\end{eqnarray}
+可以想像 RL 控制一个婴儿慢慢~\ds{调教}她的四肢动作，最后学会走路，这是经典的 RL 应用。
 
-注意 $K \in \mathbf{K}$ 只是一支 vector，它足以表示很多命题。 例如：
+但在 Genifer 中，reasoner 是 Genifer 的一部分，它教导 Genifer 如何思考，但它本身受 RL 控制。
+
+要小心避免 recursive 谬误： 对 RL 来说，reasoner 是一个 external 物体，换句话说，reasoner 虽然是一个导师，但它的内部是\ds{透明的}，这个导师本身可以被 RL 调教。
+
+要小心区分 Genifer 的 actions：
 \begin{itemize}
-\item 我在闹市中心
-\item 我想小便
-\item 附近没有厕所
-\item 我半小时后有重要约会
-\item .... 等
+\item 她对外部世界的 actions，例如「举手」、「小便」
+\item 她对 reasoner 的 \textit{control actions}
 \end{itemize}
-只要将 $K$ 的维数弄得很大，这似乎不是一个致命的问题。 最简单的做法是，如果 $S$ 是代表一句句子的 vector，那么令 $K = (S_1, S_2, ..., S_n)$，例如 $n=10$ 就是有 10 句句子用来表达当下的知识状态 (cognitive state)。 当然，$(S_1,S_2) \neq (S_2,S_1)$，所以我们可以令这空间变成 symmetric algebra，节省一些空间，但详细做法我还不清楚。
 
-通常 $K$ 的维数似乎不需很大就已经足够表达知识状态，反而 $D$ 可能是很庞大的数据（因为 $D$ 需要对各种知识状态作出反应）。
+上次说过，reasoner 只有3个基本动作： 推导、学习、查询。  如果只能调教这3个 actions，则 RL 的作用不大，所以要将 reasoner 的运作「精细化 (refine)」。
 
-现在有三大问题：
+方法是： RL 的 control actions 可以直接改写状态 $K$ 的内容。 例如说：『现在紧急状态，要小便』，那么 Genifer 可能会停下现时的工作，去厕所。
+
+$K$ 的内容基本上是无限制的，所以可以有近乎无限的 actions。 在经典 RL 里，通常用一个 table 记录所有 state-action transitions，但在这情况下我们必须用 function approximation 去近似这个 table，这也没有大碍。 
+
+\section{Remaining problems}
+
 \begin{itemize}
-\item 如何 represent 句子？
-\item $D$ 是一个神秘的 black box，它包含所有知识，但这神经网络能不能学到所有需要的 generalizations？ （以前 logic-based 时代，我已经知道 $D$ 内部还需要一些 organization，例如用 hierarchical structure 来储存知识，加快查找的速度。 现在似乎要重新在神经网络的角度再设计 $D$。）
 \item 查询算法 (query algorithm)
-\item 如有必要，可以用一个 reinforcement learner 控制这个神经逻辑系统。 但经验告诉我： 可以简单的话就简单，除非简单到做不到！  因为每多一个 module，成功率就减低 50\% 以上。 想想 Google 开始时就只有几行的 algorithm。 
 \end{itemize}
-
-找个简单的逻辑问题试验一下（推导、学习、询问 三个功能），如果 demo 成功的话再出 paper 和攞 funding。 
 
 \begin{comment}
-\section{结论}
-
-可能现在最重要的是试试那 operator R 的可行性。 用手做一个简单的 KB，然后用 R 搞搞它。
-
-甚至就用现成的 word2vec 吧！
-
-假设 
-$$ \mbox{字} \rightarrow \mbox{字} $$
-是一种箭咀。
-
-
 \section{慢吸 (slow absorption)}
 
 第一个问题是，为什么需要慢慢「吸收」句子？
