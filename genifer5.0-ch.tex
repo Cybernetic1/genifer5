@@ -94,17 +94,39 @@
 \setlength{\parindent}{0em}
 \setlength{\parskip}{1.5ex plus0.5ex minus1.2ex}
 
-\section{}
+\section{新 model}
 
+和 Joseph Cheng 谈过之后，发觉进一步简化比较好：
+
+\subsection{放弃 sentence structure}
+
+因为太麻烦了，增加复杂性。  想像一个只能用单字说话的 baby，如果她将来够聪明的话，她可以学会用单字组成句子，但那要视乎她内部知识的增长。 这些语言方面的知识，我们不会 externally program 进去。 宁愿她开始时比较低能，也好过我们 design 到筋疲力尽。
+
+回顾一下我们的 neural reasoner model：
 \begin{figure}[H]
 \centering
 \includegraphics[scale=0.75]{genifer-model-0.png}
 \end{figure}
 
+新的 cognitive state vector $K$ 可以是这样的：
 \begin{figure}[H]
 \centering
-\includegraphics[scale=0.4]{internal-state-K.png}
+\includegraphics[scale=0.75]{internal-state-K.png}
 \end{figure}
+
+$w_I$ 和 $w_O$ 分别是 Genifer 的「眼」和「口」。
+
+$w_I$ 可以是 word2vec 产生的 vector，这里我们只是利用 word2vec 输出的 representation，算法基本上是和 word2vec 无关的。
+
+$w_O$ 是 reasoner 的输出，每当这部分变动时，我们就印出一个新的字。 
+
+$s$ 是「内部状态」，也可以叫 \,"working memory" （认知科学术语），也可以看成是 Turing machine 里的记忆磁带。 它记住当前的问题状态，$D$ 作用在 $K$ 之上，产生新的结论。
+
+\subsection{用 reinforcement learning 控制 logic reasoner}
+
+好处是不需人手。 
+
+
 
 $D$ 不变，$K_0$ 是已知的，求 $K_\infty$：
 $$ K_0 \stackrel{D}{\longrightarrow} K_1 \stackrel{D}{\longrightarrow} .... \; K_\infty $$
