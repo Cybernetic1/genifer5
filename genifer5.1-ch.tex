@@ -71,7 +71,7 @@
 
 \linespread{1.2}
 
-\title{\textcolor{blue}{Genifer 5.0 理论笔记}}
+\title{\textcolor{blue}{Genifer 5.1.1 理论笔记}}
 \author{YKY (\textit{甄景贤})}
 %% \date{30 June 2015}
 %% \institute{}
@@ -94,38 +94,79 @@
 \setlength{\parindent}{0em}
 \setlength{\parskip}{1.5ex plus0.5ex minus1.2ex}
 
-和 Joseph Cheng 谈过之后，我提出进一步简化的新 model：
+整个 Genifer 系统包含 RL + RNN 两部分。
 
-\section{放弃 sentence structure}
+\section{RNN}
 
-因为太麻烦了，增加了复杂性。  想像一个只能用单字说话的 baby，如果她将来够聪明的话，她可以学会用单字组成句子，但那要视乎她内部知识的增长。 这些语言方面的知识，我们不会 externally program 进去。 宁愿她开始时比较低能，也好过我们 design 到筋疲力尽！
+RNN ($D$) 是一个 feedforward NN，只是它的输出再回溃到输入。
 
-如果 Genifer 只会「出字」，例如听到「妈妈」会输出「喝奶」，那只是很简单的条件反射式动作。 关键是 Genifer 内部有这样的一个 neural reasoner：
 \begin{figure}[H]
 \centering
 \includegraphics[scale=0.75]{reasoner-model.png}
 \end{figure}
-它有能力作出多个步骤的推理。
 
-新的 cognitive state vector $K$ 可以是这样的：
-\begin{figure}[H]
-\centering
-\includegraphics[scale=0.75]{internal-state-K.png}
-\end{figure}
+它可以执行 3 个运作：
 
-$w_I$ 和 $w_O$ 分别是 Genifer 的「眼」和「咀巴」。
+\subsection{Deduction}
 
-$w_I$ 可以是 word2vec 产生的 vector，这里我们只是利用 word2vec 输出的 representation，算法基本上是和 word2vec 无关的。
+Deduction 只需要 forward propagation。  （实际上 deduction 可能没有什么用，重要的是 querying。）
 
-$w_O$ 是 reasoner 的输出，每当这部分变动时，我们就印出一个新的字。 
+\subsection{Learning}
 
-$s$ 是「内部状态」，也可以叫 \,"working memory" （认知科学术语），也可以看成是 Turing machine 里的记忆磁带。 它记住当前的问题状态，$D$ 作用在 $K$ 之上，产生新的结论。
+Learning 是通过 back-prop，我们要求的是从 $K_0$ 开始：
+\begin{eqnarray}
+K_0 \stackrel{D}{\longrightarrow} .... \; K_\infty \nonumber \\
+K_\infty \ge K^*
+\end{eqnarray}
+但这里需要用到 $\ge$ 关系，下述。
 
-{\small 注： 我对中文智能输入法也有兴趣，这里 $w_I$ 可以是键盘字母，$w_O$ 是词语 suggestions 或 auto-complete。}
+目的是学习 $D$，令误差 $\mathcal{E}$ 最少。
 
-\section{用 reinforcement learning (RL) 控制 reasoner}
+梯度 $\frac{\partial \mathcal{E}}{\partial W}$ 的计算应该是可行的； 这里 $W$ 是 RNN 的 weights。
 
-Richard Sutton （强化学习方面的领先研究者）说，RL 应该是人工智能系统的 top-level architecture，我也赞同这点。\footnote{可以参看我在博客上写的 \href{http://geniferology.blogspot.hk/2015/04/what-is-reinforcement-learning.html}{什么是强化学习？}}
+但怎样计算 $\mathcal{E} = K_\infty - K^*$ ？  有个严重问题是： 我们要知道 $K^*$ 的知识的表达方式，但如果 $D$ 是个 black box，$K^*$ 的 representation 就不是透明的。
+
+Joseph 找到一篇 paper，叫 Memory Networks，来自 Facebook AI research \cite{Weston2015}。 他们也是用 RNN 来学习 Q\& A，但它有一个 component $I$ = input feature map，负责将句子变成 internal feature representation，它需要涉及传统 NLP 的 parsing。 我们可不可以不做这步？ \sadface
+
+问题是如果输出是 words，我们必须比较句子，亦即是 $K$ 的\textbf{序列}。 似乎可以用 convolution 方法： 记 $S := K_0, K_1, K_2, ....$ 为输出的 sequence，$S^* := K^*_0, K^*_1, ..., K^*_m $ 为想要的答案 sequence，则误差可以定义成：
+$$ \mathcal{E} := S * S^* $$
+其中 $*$ 是 convolution。 （但我不是 100\% 肯定这个用法是否正确。）
+
+\subsection{Querying}
+
+\begin{eqnarray}
+K_0 \stackrel{D}{\longrightarrow} .... \; K_\infty \nonumber \\
+K_\infty \ge ? \; K^*
+\end{eqnarray}
+
+传统逻辑的做法是，找 $K_n$ （$n$ 个推导步骤之后的结果），然后试试 $K_n$ 包不包含 $K^*$。 但通常更有效率是反向地由结论 $K^*$ 开始寻找。
+
+可以看成是这个问题：
+\begin{eqnarray}
+\mbox{solve}\quad\quad D^n(\mathbf{x}) & > & K^* \nonumber \\
+K_0 & \ge & \mathbf{x}
+\end{eqnarray}
+其中 $\mathbf{x}$ 是变量。 我们要求 $>$ 是大於某个 threshold $\epsilon$。  这是一条 iterative equation，似乎还有希望。
+
+上次说过如果 D 是 monotonous，即 $\forall \mathbf{x} \; D(\mathbf{x}) \ge \mathbf{x}$，可能有帮助。
+
+\subsection{\texorpdfstring{$\ge$}{>} 关系}
+
+$\ge$ 是逻辑中的「generalize」关系，它有两种模式：
+\begin{itemize}
+\item 人会死 $\ge$ Socrates 会死
+\item 人会死 $\ge$ ( 人会死 $\wedge$ 月亮是圆的 ~)
+\end{itemize}
+
+在 (topological) vector space 理论里，我们可以定义 vector 之间的 $\mathbf{v}_1 \ge \mathbf{v}_2$，方法是选取任何一个 cone （锥形）$C$：
+$$ \mathbf{v}_1 \ge \mathbf{v}_2 \Leftrightarrow (\mathbf{v}_1 - \mathbf{v}_2) \in C $$
+例如如果在平面上，$C$ 可以是右上角的 quadrant。
+
+我在考虑： 我们可不可以选取任何一个在 $\mathbf{K}$ 空间中的 cone 来定义 $\ge$，然后让 RNN 自己学习 $\ge$ 的逻辑结构（例如~ 动物 $\ge $ 猫、$A \ge A \wedge B$）？
+
+\begin{comment}
+%===========================================================================
+\section{RL}
 
 整个 Genifer 系统会是这样的：
 \begin{figure}[H]
@@ -155,11 +196,6 @@ $K$ 的内容基本上是无限制的，所以可以有近乎无限的 actions�
 
 \section{Remaining problems}
 
-\begin{itemize}
-\item 查询算法 (query algorithm)
-\end{itemize}
-
-\begin{comment}
 \section{慢吸 (slow absorption)}
 
 第一个问题是，为什么需要慢慢「吸收」句子？
@@ -180,7 +216,8 @@ $K$ 的内容基本上是无限制的，所以可以有近乎无限的 actions�
 
 现在我们似乎只剩下 $G$ 的结构可以改变。 单单改变 G 是否可以达到「更快、更准、更全面」？
 
-\end{comment}
+%===========================================================================
+\end{comment} 
 
 % \section*{Acknowledgments}
 
