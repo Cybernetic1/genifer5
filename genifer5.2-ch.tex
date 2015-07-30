@@ -1,0 +1,309 @@
+% Todo:
+
+\documentclass[12pt]{article}
+\usepackage[no-math]{fontspec}	% no-math option required for accents package
+\usepackage{hyperref}
+\usepackage{xeCJK}
+%\setCJKmainfont{SimSun}
+\setCJKmainfont[BoldFont=SimHei,ItalicFont=KaiTi]{SimSun}
+% \setCJKsansfont{SimHei}
+% \setCJKmonofont{SimKai}
+\setmainfont{Arial}
+
+\usepackage{accents}		% for dots under Chinese for empahsis
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsfonts}
+% \usepackage{amsmath}	% for \tag
+\usepackage{amssymb}	% for \multimap
+% \usepackage{stmaryrd}
+\usepackage{color}
+%\usepackage[square,numbers]{natbib}
+%\nocopyright
+%\usepackage{latexsym,amsmath,amssymb,graphicx,hyperref}
+%\usepackage{times} % gives you a bit more space if needed
+\usepackage{titlesec}		% change color of section headings
+\usepackage{verbatim}		% enables to define {comment} blocks
+%\usepackage[most]{tcolorbox}		% color box
+
+% Left and right angle brackets
+\makeatletter
+\newsavebox{\@brx}
+\newcommand{\llangle}[1][]{\savebox{\@brx}{\(\m@th{#1\langle}\)}%
+  \mathopen{\copy\@brx\kern-0.5\wd\@brx\usebox{\@brx}}}
+\newcommand{\rrangle}[1][]{\savebox{\@brx}{\(\m@th{#1\rangle}\)}%
+  \mathclose{\copy\@brx\kern-0.5\wd\@brx\usebox{\@brx}}}
+\makeatother
+
+% Make dots under Chinese characters for emphasis
+\renewcommand{\d}[1]{$\underaccent{\scalebox{0.4}{\textbullet}}{\textrm{#1}}$}
+\makeatletter\newcommand{\ds}[1]{\@tfor\next:=#1\do{\d{\next}}}\makeatother
+
+\titleformat{\section}
+{\color{blue}\normalfont\Large\bfseries}
+{\color{blue}\thesection}{1em}{}
+\titleformat{\subsection}
+{\color{blue}\normalfont\large\bfseries}
+{\color{blue}\thesubsection}{1em}{}
+
+\renewcommand\abstractname{\textcolor{blue}{Abstract}}
+
+\definecolor{LogicColor}{rgb}{0.4,0.1,0.4}  % Magenta
+\definecolor{Hilight}{rgb}{0.9,0.9,0.8}  % Magenta
+% \definecolor{LogicColor}{rgb}{0,0,0}	% for black-and-white paper
+
+\newcommand{\concept}[1]{\textbf{\textcolor{blue}{#1}}}
+
+\newcommand{\english}[1]{\rmfamily \textit{``#1''}\rmfamily}
+\newcommand{\formula}[1]{\textcolor{LogicColor}{#1}}
+
+\newcommand{\hilight}[1]{\begin{tcolorbox}[breakable]#1\end{tcolorbox}}
+
+\newcommand{\tab}{\hspace*{1cm}}
+
+\newcommand*\sigmoid{\vcenter{\hbox{\includegraphics{sigmoid.png}}}}
+\newcommand*\sadface{\includegraphics[scale=0.25]{face-sad.png}}
+
+\setlength{\oddsidemargin}{1cm}
+\setlength{\evensidemargin}{1cm}
+\setlength{\textwidth}{14cm}
+
+\linespread{1.2}
+
+\title{\textcolor{blue}{Genifer 5.2 理论笔记}}
+\author{YKY (\textit{甄景贤})}
+%% \date{30 June 2015}
+%% \institute{}
+
+\begin{document}
+
+\begin{comment}
+\tab\tab\tab \parbox{9cm}{\textit{.....}}
+% \vspace{-0.5cm}
+\begin{flushright}
+\textemdash\, .... \hspace*{2cm}
+\end{flushright}
+\end{comment}
+
+% \sffamily
+
+{\let\newpage\relax\maketitle}
+
+\maketitle
+\setlength{\parindent}{0em}
+\setlength{\parskip}{1.5ex plus0.5ex minus1.2ex}
+
+上次的模型：
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.75]{reasoner-model.png}
+\end{figure}
+$K$ 可以直接输出一些 words，words 的序列构成句子。
+
+这做法太简单，因为我假设自然语言是一些 sequences，但自然语言的结构不是序列那么简单，例如「未吃过饭」包含「吃过饭」的序列，但语义是相反的。 所以自然语言必须要在语义 (semantic) 层面上处理，而不是语法 (syntactic) 层面上。
+
+\section{Language map}
+
+在 Memory Networks\cite{Weston2015} 里，他们用了一个 language map，将自然语言句子转换成 internal representation of knowledge in $\mathbf{K}$，$\mathbf{K} \ni K$ 是知识状态的空间。 可以叫这个 map 做 language map：
+\begin{eqnarray}
+\mathcal{L} :& \mathbf{S} & \rightarrow \mathbf{K} \nonumber \\
+\mathcal{L} :& \mbox{句子} & \mapsto K \nonumber
+\end{eqnarray}
+（但其实句子只是知识状态 $K$ 的一部分。）
+
+有了这个 language map 是很方便的，但它有两个问题：
+\begin{itemize}
+\item 需要用到 NLP parsing，很麻烦，如果能省略比较好
+\item 这个 map 基本上 fix 了 internal knowledge representation 的形式。 但我的直观（也可能错误）觉得 knowledge representation 应该是「不知道的」比较好，它应该是由学习 $D$ 的过程「诱导」出来的，换句话说： the knowledge representation format should be \textit{induced} from the learning of $D$.  因为以前在经典逻辑系统中，$K$ = KB (knowledge base) 是一些命题的集合，换句话说 $ K = \bigsqcup S_i $，$S_i$ 是句子或「命题」。  当时的做法是将 KB 组织成 hierarchical 结构，方便搜寻。 但我觉得如果 $\mathbf{K}$ 的结构是这样的话，一切都太「井井有条」，可能不是神经网络最有效的用法。
+\end{itemize}
+
+现在我先假设有 language map 的存在，因为比较方便思考。
+
+於是我们的 RNN model 变成这样：
+$$ \mbox{句子输入} \stackrel{\mathcal{L}}{\longrightarrow} \stackrel{\stackrel{\mbox{\raisebox{3pt}{\normalsize{$D$}}}}{\raisebox{5pt}{\scalebox{2.0}{\ensuremath{\rotatebox[origin=c]{180}{$\circlearrowleft$}}}}}}{\mathbf{K}} \stackrel{\mathcal{L}^{-1}}{\longrightarrow} \mbox{句子输出} $$
+
+有 $\mathcal{L}$ 的好处是，它容许 direct access to $K$，即是将知识状态的内容，直接用自然语言读出来（或写入去）。 但现实中 $\mathcal{L}$ 不应该存在，这会在第 \ref{language-comprehension} 节解释。
+
+假设有 $\mathcal{L}$，容易做到以下两种学习方式：
+
+\subsection{Inductive learning}
+
+举例：\\
+\tab 小明是香港人 $\wedge$ 小明戴眼镜 \\
+\tab 小强是香港人 $\wedge$ 小强戴眼镜 \\
+\tab 小雄是香港人 $\wedge$ 小雄戴眼镜 \\
+\tab 小娟是香港人 $\wedge$ 小娟戴眼镜 \\
+\tab 结论： 所有香港人都戴眼镜 \\
+用逻辑表示这法则就是：
+$$ \forall X. \; \mbox{Hong-Kong}(X) \rightarrow \mbox{wear-glasses}(X) $$
+但在 RNN 里，这法则是暗含在 $D$ 之中。 例如如果 $k = \mbox{「大强是香港人」}$，那么 $D$ 作用在 $K$ 上最终会得出 $K' = \mbox{「大强戴眼镜」}$。
+
+换句话说，已知 $K_0$，$K^*$，学习 $D$：
+$$ K_0 \stackrel{D}{\longrightarrow} .... \; K^* $$
+
+因为我们可以用 $K = \mathcal{L}(\mbox{自然语言句子})$ 来计算 $K_0$ 和 $K^*$，所以这个算法是可行的。
+
+\subsection{Reinforcement learning of \texorpdfstring{$D$}{D}}
+
+$$ K \stackrel{D}{\longrightarrow} .... \; K' $$
+which can recieve "right" or "wrong" rewards.
+
+This is analogous to:
+$$ \mbox{state} \stackrel{\mbox{action}}{\resizebox{1.8cm}{0.15cm}{$\longrightarrow$}} \mbox{state'}$$
+
+\section{Speech comprehension}
+\label{language-comprehension}
+
+但其实 $\mathcal{L}$ 不是一个普通 map 而是一个很复杂的算法。
+
+「理解」包括这些元素：
+\begin{itemize}
+\item consequences （找出新命题的所有可能推论结果，至少在 $n$ 步之内）
+\item consistency （新信念不和旧信念抵触）
+\item explanations （新信念可以被已有知识解释）
+\end{itemize}
+
+「理解」的过程可以看成是： 经过 $d$ 次的 $\mathcal{D}$，$K$ 变成 $K'$，而 $K'$ 有我们想要的特性（即和谐解释和推论）。  问题就是怎样测试 $K'$ 有这些特性？  特别困难的原因是 $K \in \mathbf{K}$ 的 representation 是不透明的。
+
+$K'$ 的特性可以怎样测试？
+
+似乎唯一的方法是透过这样的查询：
+$$ K \stackrel{D}{\longrightarrow} .... \; q \; ? $$
+但 $q$ 也是 $\in \mathbf{K}$，而 $\mathbf{K}$ 的结构是不透明的。
+
+\section{Speech generation （发言）}
+
+发言有两种模式：
+\begin{itemize}
+\item 查询某句子 $Q$ 是不是真的
+\item 查询关於某题目 $I$ 的内容，eg: "Tell me about your mother"
+\end{itemize}
+
+整个 Genifer 系统包含 RL + RNN 两部分。
+
+\section{RNN}
+
+RNN ($D$) 是一个 feedforward NN，只是它的输出再回溃到输入。
+
+
+它可以执行 3 个运作：
+
+\subsection{Deduction}
+
+Deduction 只需要 forward propagation。  （实际上 deduction 可能没有什么用，重要的是 querying。）
+
+\subsection{Learning}
+
+Learning 是通过 back-prop，我们要求的是从 $K_0$ 开始：
+\begin{eqnarray}
+K_0 \stackrel{D}{\longrightarrow} .... \; K_\infty \nonumber \\
+K_\infty \ge K^*
+\end{eqnarray}
+但这里需要用到 $\ge$ 关系，下述。
+
+目的是学习 $D$，令误差 $\mathcal{E}$ 最少。
+
+梯度 $\frac{\partial \mathcal{E}}{\partial W}$ 的计算应该是可行的； 这里 $W$ 是 RNN 的 weights。
+
+但怎样计算 $\mathcal{E} = K_\infty - K^*$ ？  有个严重问题是： 我们要知道 $K^*$ 的知识的表达方式，但如果 $D$ 是个 black box，$K^*$ 的 representation 就不是透明的。
+
+Joseph 找到一篇 paper，叫 Memory Networks，来自 Facebook AI research \cite{Weston2015}。 他们也是用 RNN 来学习 Q\& A，但它有一个 component $I$ = input feature map，负责将句子变成 internal feature representation，它需要涉及传统 NLP 的 parsing。 我们可不可以不做这步？ \sadface
+
+问题是如果输出是 words，我们必须比较句子，亦即是 $K$ 的\textbf{序列}。 似乎可以用 convolution 方法： 记 $S := K_0, K_1, K_2, ....$ 为输出的 sequence，$S^* := K^*_0, K^*_1, ..., K^*_m $ 为想要的答案 sequence，则误差可以定义成：
+$$ \mathcal{E} := S * S^* $$
+其中 $*$ 是 convolution。 （但我不是 100\% 肯定这个用法是否正确。）
+
+\subsection{Querying}
+
+\begin{eqnarray}
+K_0 \stackrel{D}{\longrightarrow} .... \; K_\infty \nonumber \\
+K_\infty \ge ? \; K^*
+\end{eqnarray}
+
+传统逻辑的做法是，找 $K_n$ （$n$ 个推导步骤之后的结果），然后试试 $K_n$ 包不包含 $K^*$。 但通常更有效率是反向地由结论 $K^*$ 开始寻找。
+
+可以看成是这个问题：
+\begin{eqnarray}
+\mbox{solve}\quad\quad D^n(\mathbf{x}) & > & K^* \nonumber \\
+K_0 & \ge & \mathbf{x}
+\end{eqnarray}
+其中 $\mathbf{x}$ 是变量。 我们要求 $>$ 是大於某个 threshold $\epsilon$。  这是一条 iterative equation，似乎还有希望。
+
+上次说过如果 D 是 monotonous，即 $\forall \mathbf{x} \; D(\mathbf{x}) \ge \mathbf{x}$，可能有帮助。
+
+\subsection{\texorpdfstring{$\ge$}{>} 关系}
+
+$\ge$ 是逻辑中的「generalize」关系，它有两种模式：
+\begin{itemize}
+\item 人会死 $\ge$ Socrates 会死
+\item 人会死 $\ge$ ( 人会死 $\wedge$ 月亮是圆的 ~)
+\end{itemize}
+
+在 (topological) vector space 理论里，我们可以定义 vector 之间的 $\mathbf{v}_1 \ge \mathbf{v}_2$，方法是选取任何一个 cone （锥形）$C$：
+$$ \mathbf{v}_1 \ge \mathbf{v}_2 \Leftrightarrow (\mathbf{v}_1 - \mathbf{v}_2) \in C $$
+例如如果在平面上，$C$ 可以是右上角的 quadrant。
+
+我在考虑： 我们可不可以选取任何一个在 $\mathbf{K}$ 空间中的 cone 来定义 $\ge$，然后让 RNN 自己学习 $\ge$ 的逻辑结构（例如~ 动物 $\ge $ 猫、$A \ge A \wedge B$）？
+
+\begin{comment}
+%===========================================================================
+\section{RL}
+
+整个 Genifer 系统会是这样的：
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.75]{genifer-model-0.png}
+\end{figure}
+
+设计一个 RL 系统只需定义 4 个元素： \{ 状态 (states)、行动 (actions)、奖励 (rewards)、方案 (policy) \}，其中 policy 是由算法自动计算出来的 states $\rightarrow$ actions 函数。
+
+可以想像 RL 控制一个婴儿慢慢~\ds{调教}她的四肢动作，最后学会走路，这是经典的 RL 应用。
+
+但在 Genifer 中，reasoner 是 Genifer 的一部分，它教导 Genifer 如何思考，但它本身受 RL 控制。
+
+要小心避免 recursive 谬误： 对 RL 来说，reasoner 是一个 external 物体，换句话说，reasoner 虽然是一个导师，但它的内部是\ds{透明的}，这个导师本身可以被 RL 调教。
+
+要小心区分 Genifer 的 actions：
+\begin{itemize}
+\item 她对外部世界的 actions，例如「举手」、「小便」
+\item 她对 reasoner 的 \textit{control actions}
+\end{itemize}
+
+上次说过，reasoner 只有3个基本动作： 推导、学习、查询。  如果只能调教这3个 actions，则 RL 的作用不大，所以要将 reasoner 的运作「精细化 (refine)」。
+
+方法是： RL 的 control actions 可以直接改写状态 $K$ 的内容。 例如说：『现在紧急状态，要小便』，那么 Genifer 可能会停下现时的工作，去厕所。
+
+$K$ 的内容基本上是无限制的，所以可以有近乎无限的 actions。 在经典 RL 里，通常用一个 table 记录所有 state-action transitions，但在这情况下我们必须用 function approximation 去近似这个 table，这也没有大碍。 
+
+\section{Remaining problems}
+
+\section{慢吸 (slow absorption)}
+
+第一个问题是，为什么需要慢慢「吸收」句子？
+\begin{itemize}
+\item 找出与其他句子的关系
+\item 逻辑和谐
+\item 找出句子下游的逻辑后果
+\item 最后，找出最适当的在句子空间中的位置
+\end{itemize}
+
+慢吸需要服从的约束是？
+\begin{itemize}
+\item fast
+\item accurate
+\item comprehensive (全面)
+\end{itemize}
+全面的意思是： 在一定复杂性以下可以推导到的结论，就应该推导到（这涉及 $P =? NP$ 问题）。
+
+现在我们似乎只剩下 $G$ 的结构可以改变。 单单改变 G 是否可以达到「更快、更准、更全面」？
+
+%===========================================================================
+\end{comment} 
+
+% \section*{Acknowledgments}
+
+\bibliographystyle{plain} % or number or aaai ...
+\bibliography{AGI-book}
+
+\end{document}
