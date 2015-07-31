@@ -26,6 +26,7 @@
 \usepackage{titlesec}		% change color of section headings
 \usepackage{verbatim}		% enables to define {comment} blocks
 %\usepackage[most]{tcolorbox}		% color box
+\usepackage{tikz-cd}
 
 % Left and right angle brackets
 \makeatletter
@@ -78,13 +79,12 @@
 
 \begin{document}
 
-\begin{comment}
-\tab\tab\tab \parbox{9cm}{\textit{.....}}
+\tab\tab\tab \parbox{9cm}{\textit{筌者所以在鱼，得鱼而忘筌；蹄者所以在兔，得兔而忘蹄；言者所以在意，得意而忘言。}}
 % \vspace{-0.5cm}
 \begin{flushright}
-\textemdash\, .... \hspace*{2cm}
+%\textemdash\, 
+\textit{《庄子 $\cdot$ 外物》} \hspace*{2cm}
 \end{flushright}
-\end{comment}
 
 % \sffamily
 
@@ -101,7 +101,7 @@
 \end{figure}
 $K$ 可以直接输出一些 words，words 的序列构成句子。
 
-这做法太简单，因为我假设自然语言是一些 sequences，但自然语言的结构不是序列那么简单，例如「未吃过饭」包含「吃过饭」的序列，但语义是相反的。 所以自然语言必须要在语义 (semantic) 层面上处理，而不是语法 (syntactic) 层面上。
+这做法太简单，因为我假设自然语言是一些 sequences，但自然语言的结构不是序列那么简单，例如「未吃过饭」包含「吃过饭」的序列，但语义是相反的。 所以自然语言必须要在语义 (semantic) 层面上处理，而不是语法 (syntactic) 层面上。 自然语言的复杂性是不会轻易消失的。
 
 \section{Language map}
 
@@ -112,18 +112,61 @@ $K$ 可以直接输出一些 words，words 的序列构成句子。
 \end{eqnarray}
 （但其实句子只是知识状态 $K$ 的一部分。）
 
-有了这个 language map 是很方便的，但它有两个问题：
+於是我们的 RNN model 变成这样：
+\begin{center}
+\begin{tikzcd}%[column sep=small]
+\mbox{句子输入}\arrow[r,"\scalebox{1.3}{$\mathcal{L}$}"] & \mathbf{K} \arrow[r,"\scalebox{1.3}{$\mathcal{L}^{-1}$}"] \arrow[loop,"\scalebox{1.3}{$D$}",swap,looseness=4] & \mbox{句子输出}
+% S\arrow{r} & K\arrow{r}\arrow{r}{loop,"D"} & S
+\end{tikzcd}
+\end{center}
+%$$ \mbox{句子输入} \stackrel{\mathcal{L}}{\longrightarrow} \stackrel{\stackrel{\mbox{\raisebox{3pt}{\normalsize{$D$}}}}{\raisebox{5pt}{\scalebox{2.0}{\ensuremath{\rotatebox[origin=c]{180}{$\circlearrowleft$}}}}}}{\mathbf{K}} \stackrel{\mathcal{L}^{-1}}{\longrightarrow} \mbox{句子输出} $$
+
+有了这个 language map 是很方便的，但它有几个问题：
 \begin{itemize}
+
 \item 需要用到 NLP parsing，很麻烦，如果能省略比较好
-\item 这个 map 基本上 fix 了 internal knowledge representation 的形式。 但我的直观（也可能错误）觉得 knowledge representation 应该是「不知道的」比较好，它应该是由学习 $D$ 的过程「诱导」出来的，换句话说： the knowledge representation format should be \textit{induced} from the learning of $D$.  因为以前在经典逻辑系统中，$K$ = KB (knowledge base) 是一些命题的集合，换句话说 $ K = \bigsqcup S_i $，$S_i$ 是句子或「命题」。  当时的做法是将 KB 组织成 hierarchical 结构，方便搜寻。 但我觉得如果 $\mathbf{K}$ 的结构是这样的话，一切都太「井井有条」，可能不是神经网络最有效的用法。
+
+\item 这个 map 基本上 fix 了 internal knowledge representation 的形式。 但我的直观（也可能错误）觉得 knowledge representation 应该是「不知道的」比较好，它应该是由学习 $D$ 的过程「诱导」出来的，换句话说： the knowledge representation format should be \textit{induced} from the learning of $D$.  因为以前在经典逻辑系统中，$K$ = KB (knowledge base) 是一些命题的集合，换句话说 $ K = \bigsqcup S_i $，$S_i$ 是句子或「命题」。  当时的做法是将 KB 组织成 hierarchical 结构，方便搜寻。 但我觉得如果 $\mathbf{K}$ 的结构是这样的话，跟原问题的情况太相似，一切都太「有秩序」，可能不是神经网络最有效的用法。
+
+\item 自然语言是需要慢慢「吸收」或「理解」(comprehend) 的，但这过程在 Memory Networks 的模型里忽略了。  将自然句子转换成 logical 形式（即 internal representation），几乎是不需时间的 transliteration 过程。  如果输入一本《世界历史》的原文，不消一秒便可以转换成 internal representation，但不能说 Genifer 已经「理解」了全书的内容吧？
+
 \end{itemize}
 
-现在我先假设有 language map 的存在，因为比较方便思考。
+\section{理解 ／ 慢吸收}
+% \label{language-comprehension}
 
-於是我们的 RNN model 变成这样：
-$$ \mbox{句子输入} \stackrel{\mathcal{L}}{\longrightarrow} \stackrel{\stackrel{\mbox{\raisebox{3pt}{\normalsize{$D$}}}}{\raisebox{5pt}{\scalebox{2.0}{\ensuremath{\rotatebox[origin=c]{180}{$\circlearrowleft$}}}}}}{\mathbf{K}} \stackrel{\mathcal{L}^{-1}}{\longrightarrow} \mbox{句子输出} $$
+所以 $\mathcal{L}$ 不是一个普通 map 而是一个很复杂的算法。
 
-有 $\mathcal{L}$ 的好处是，它容许 direct access to $K$，即是将知识状态的内容，直接用自然语言读出来（或写入去）。 但现实中 $\mathcal{L}$ 不应该存在，这会在第 \ref{language-comprehension} 节解释。
+对新输入知识的「慢吸收」包括这些运作：
+\begin{itemize}
+\item consequences （找出新命题的所有可能推论结果，至少在 $n$ 步之内）
+\item consistency （新信念不和旧信念抵触）
+\item explanations （新信念可以被已有知识解释）
+\end{itemize}
+
+「理解」的过程可以看成是： 经过 $n$ 次的推导 $\mathcal{D}$，$K$ 变成 $K'$：
+\begin{center}
+\begin{tikzcd}[row sep=tiny]
+K \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & K'
+\end{tikzcd}
+\end{center}
+% $$ K \stackrel{D^n}{\mapsto} K' $$
+而 $K'$ 有我们想要的特性（即「后果、和谐、解释」）。  问题就是怎样测试 $K'$ 有这些特性？  特别困难的原因是 $K' \in \mathbf{K}$ 的 representation 是不透明的。
+
+$K'$ 的特性可以怎样测试？
+
+似乎唯一的方法是透过这样的查询：
+\begin{center}
+\begin{tikzcd}[row sep=tiny]
+K \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & Q \; ?
+\end{tikzcd}
+\end{center}
+% $$ K \stackrel{D}{\longrightarrow} .... \; q \; ? $$
+但 $Q$ 也是 $\in \mathbf{K}$，而 $\mathbf{K}$ 的结构是不透明的。
+
+如果有 $\mathcal{L}$ 的话，直接将问题用自然语言问，变成 $Q = \mathcal{L}(\mbox{句子})$，就可以查询 $K$。 换句话说，$\mathcal{L}$ 的好处是容许 direct access to $K$，将知识状态的内容，直接用自然语言读出来（或写入去）。 但现实中不存在一个简单的 $\mathcal{L}$ map。
+
+
 
 假设有 $\mathcal{L}$，容易做到以下两种学习方式：
 
@@ -152,25 +195,6 @@ which can recieve "right" or "wrong" rewards.
 This is analogous to:
 $$ \mbox{state} \stackrel{\mbox{action}}{\resizebox{1.8cm}{0.15cm}{$\longrightarrow$}} \mbox{state'}$$
 
-\section{Speech comprehension}
-\label{language-comprehension}
-
-但其实 $\mathcal{L}$ 不是一个普通 map 而是一个很复杂的算法。
-
-「理解」包括这些元素：
-\begin{itemize}
-\item consequences （找出新命题的所有可能推论结果，至少在 $n$ 步之内）
-\item consistency （新信念不和旧信念抵触）
-\item explanations （新信念可以被已有知识解释）
-\end{itemize}
-
-「理解」的过程可以看成是： 经过 $d$ 次的 $\mathcal{D}$，$K$ 变成 $K'$，而 $K'$ 有我们想要的特性（即和谐解释和推论）。  问题就是怎样测试 $K'$ 有这些特性？  特别困难的原因是 $K \in \mathbf{K}$ 的 representation 是不透明的。
-
-$K'$ 的特性可以怎样测试？
-
-似乎唯一的方法是透过这样的查询：
-$$ K \stackrel{D}{\longrightarrow} .... \; q \; ? $$
-但 $q$ 也是 $\in \mathbf{K}$，而 $\mathbf{K}$ 的结构是不透明的。
 
 \section{Speech generation （发言）}
 
