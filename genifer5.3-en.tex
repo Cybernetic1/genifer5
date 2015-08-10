@@ -25,8 +25,9 @@
 %\usepackage{times} % gives you a bit more space if needed
 \usepackage{titlesec}		% change color of section headings
 \usepackage{verbatim}		% enables to define {comment} blocks
-%\usepackage[most]{tcolorbox}		% color box
+% \usepackage[most]{tcolorbox}		% color box
 \usepackage{tikz-cd}		% commutative diagrams
+\usepackage{enumerate}
 
 % Left and right angle brackets
 \makeatletter
@@ -51,7 +52,8 @@
 \renewcommand\abstractname{\textcolor{blue}{Abstract}}
 
 \definecolor{LogicColor}{rgb}{0.4,0.1,0.4}  % Magenta
-\definecolor{Hilight}{rgb}{0.9,0.9,0.8}  % Magenta
+\definecolor{Hilight}{rgb}{0.9,0.9,0.8}  % yellow
+\definecolor{grey}{rgb}{0.9,0.9,0.9}  % grey
 % \definecolor{LogicColor}{rgb}{0,0,0}	% for black-and-white paper
 
 \newcommand{\concept}[1]{\textbf{\textcolor{blue}{#1}}}
@@ -73,19 +75,19 @@
 
 \linespread{1.2}
 
-\title{\textcolor{blue}{Genifer 5.2 理论笔记}}
+\title{\textcolor{blue}{Genifer 5.3 theoretical notes}}
 \author{YKY (\textit{甄景贤})}
 %% \date{30 June 2015}
 %% \institute{}
 
 \begin{document}
 
-\tab\tab\tab \parbox{9cm}{\textit{筌者所以在鱼，得鱼而忘筌；蹄者所以在兔，得兔而忘蹄；言者所以在意，得意而忘言。}}
+%\tab\tab\tab \parbox{9cm}{\textit{筌者所以在鱼，得鱼而忘筌；蹄者所以在兔，得兔而忘蹄；言者所以在意，得意而忘言。}}
 % \vspace{-0.5cm}
-\begin{flushright}
+%\begin{flushright}
 %\textemdash\, 
-\textit{《庄子 $\cdot$ 外物》} \hspace*{2cm}
-\end{flushright}
+%\textit{《庄子 $\cdot$ 外物》} \hspace*{2cm}
+%\end{flushright}
 
 % \sffamily
 
@@ -94,6 +96,105 @@
 \maketitle
 \setlength{\parindent}{0em}
 \setlength{\parskip}{1.5ex plus0.5ex minus1.2ex}
+
+\section{Top-level architecture}
+
+在最高层面上，RL 控制 RNN：
+
+\begin{center}
+\fbox{\parbox[b][][t]{3.2em}{RL \\
+\fbox{\parbox[c][][s]{2.2em}{RNN} }
+} }
+\end{center}
+
+可以想像，RNN 是 RL 的 ``mental model''，即这 RL 比普通 RL 有更复杂的内部模型。
+
+馀下的工作是，定义 RL 的四个元素： states, actions, rewards, policy。
+
+\section{Unification of RL and RNN}
+
+在统一 RL 和 RNN 的时候，我发现它们之间的关系非常简单：
+
+从\textbf{强化学习}的角度来看，我们需要的是这个函数：
+\begin{center}
+\begin{tikzcd}[row sep=tiny]
+\mbox{policy : ~~state} \arrow[r, mapsto, "\scalebox{0.8}{action}"] & \mbox{state'}
+\end{tikzcd}
+\end{center}
+而 $K$ 可以看成是我们的 mental state，那么 RL 的 action 就是将 $K$ 变成 $K'$ 的作用，而那正是 $D$！
+\begin{center}
+\begin{tikzcd}[row sep=tiny]
+K \arrow[r, mapsto, "\scalebox{1.3}{$D$}"] & K'
+\end{tikzcd}
+\end{center}
+换句话说，$D$ 就是 policy。
+
+从强化学习的角度看，某些推导过程的结果，可以给予奖励：
+\begin{center}
+\begin{tikzcd}[row sep=tiny]
+K_0 \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & K_\bot \quad \updownarrow \bigstar
+\end{tikzcd}
+\end{center}
+$\updownarrow \bigstar$ 的意思是「给予正或负奖励」。  我们要学习的是 $D$ 也就是 policy。  学习算法的基础是著名的 Bellman optimality condition。
+
+但 $D$ 本身是 RNN，它还可以透过 back-prop 进行学习，两者似乎是不同的。  Back-prop 是透过 $\frac{\partial \mathcal{E}}{\partial D}$ 的梯度来学习。
+
+\begin{center}
+\colorbox{grey}{\parbox{0.85\textwidth}{
+回顾一下 Bellman equation 是：
+$$ U(S) = \max_a \{ R(S,a) + U(S') \}$$
+$a$ 是对所有 actions。
+
+这个方程有微分版本，叫 Hamilton-Jacobi equation：
+\begin{eqnarray}
+U(t,x) &:=& \min_u \{ J(t,x,u) \} \nonumber \\
+J(t,x,u) &:=& \int_t^{t_1} L(s, x(s), u(s))ds + K(x(t_1)) \nonumber
+\end{eqnarray} 
+}}
+\end{center}
+
+在思维过程中，除了结果以外，其他步骤是没有奖励的，所以 reward 只可以是一个微小的负常数（代表时间损耗）。 在这情况下 Bellman 算法可能变到和 back-prop 一样，但我还未详细验算。
+
+以下我们分别讲述 4 种学习模式：
+\begin{itemize}
+\item 学习~听／讲
+\item RL-based learning
+\item inductive learning
+\end{itemize}
+
+\section{学习~听／讲}
+
+我发现~听／讲~是可以靠 RL 学习的。
+
+Learning modes:
+\begin{enumerate}
+\item Listening:  $K$ contains understanding of linguistic input, test $K$
+\item Speaking:  $K$ is known, $\mbox{output} \approx_{L} K$
+\end{enumerate}
+
+\begin{center}
+\begin{tikzcd}[row sep=tiny]
+K_0 \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & \mbox{输出句子} \quad \updownarrow \bigstar
+\end{tikzcd}
+\end{center}
+
+\section{RL-based learning}
+
+
+
+\section{Inductive learning}
+
+Actions:
+\begin{enumerate}[(A)]
+\item deduction (apply $D$)
+\item write / add to $K$ partially:  $K := K'$ or $K += K'$
+\item learn = change $D$
+\item learn = neurogenesis
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\color{red}\rule{10cm}{2pt}}
 
 上次的模型：
 \begin{figure}[H]
@@ -202,27 +303,6 @@ $$ \forall X. \; \mbox{Hong-Kong}(X) \Rightarrow \mbox{wear-glasses}(X) $$
 $$ K_0 \stackrel{D}{\longrightarrow} .... \; K^* $$
 
 因为我们可以用 $K = \mathcal{L}(\mbox{自然语言句子})$ 来计算 $K_0$ 和 $K^*$，所以这个算法是可行的。
-
-\subsection{Reinforcement learning of \texorpdfstring{$D$}{D}}
-
-假设 RNN 做了一些推论：
-\begin{center}
-\begin{tikzcd}[row sep=tiny]
-K \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & K'
-\end{tikzcd}
-\end{center}
-% $$ K \stackrel{D}{\longrightarrow} .... \; K' $$
-我们从「外部」可以给予它「对」与「错」的奖励（奖励可以是连续的量，因为有些结论可以特别有趣或重要）。
-
-但上面这个过程，也可以放在\textbf{强化学习}的角度来看：
-\begin{center}
-\begin{tikzcd}[row sep=tiny]
-\mbox{state} \arrow[r, mapsto, "\scalebox{0.8}{action}"] & \mbox{state'}
-\end{tikzcd}
-\end{center}
-% $$ \mbox{state} \stackrel{\mbox{action}}{\resizebox{1.8cm}{0.15cm}{$\longrightarrow$}} \mbox{state'}$$
-
-其实我还要从 top-level 的角度统一强化学习和 RNN，这只是一个初步想法，迟些再谈！ \smiley
 
 \begin{comment}
 %===========================================================================
