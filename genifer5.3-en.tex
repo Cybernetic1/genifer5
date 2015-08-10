@@ -95,7 +95,7 @@
 
 \maketitle
 \setlength{\parindent}{0em}
-\setlength{\parskip}{1.5ex plus0.5ex minus1.2ex}
+\setlength{\parskip}{2.5ex plus0.5ex minus1.2ex}
 
 \section{Top-level architecture}
 
@@ -107,7 +107,7 @@
 } }
 \end{center}
 
-可以想像，RNN 是 RL 的 ``mental model''，即这 RL 比普通 RL 有更复杂的内部模型。
+可以想像，RNN 是 RL 的 ``mental model''； 换句话说，我们的 RL 比普通 RL 有更复杂的内部模型。
 
 馀下的工作是，定义 RL 的四个元素： states, actions, rewards, policy。
 
@@ -115,7 +115,7 @@
 
 在统一 RL 和 RNN 的时候，我发现它们之间的关系非常简单：
 
-从\textbf{强化学习}的角度来看，我们需要的是这个函数：
+从\textbf{强化学习}的角度来看，我们需要学习的是这个 policy 函数：
 \begin{center}
 \begin{tikzcd}[row sep=tiny]
 \mbox{policy : ~~state} \arrow[r, mapsto, "\scalebox{0.8}{action}"] & \mbox{state'}
@@ -135,25 +135,9 @@ K \arrow[r, mapsto, "\scalebox{1.3}{$D$}"] & K'
 K_0 \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & K_\bot \quad \updownarrow \bigstar
 \end{tikzcd}
 \end{center}
-$\updownarrow \bigstar$ 的意思是「给予正或负奖励」。  我们要学习的是 $D$ 也就是 policy。  学习算法的基础是著名的 Bellman optimality condition。
+$\updownarrow \bigstar$ 的意思是「给予正或负奖励」。  我们要学习的是 $D$ 也就是 policy。  学习算法的基础是著名的 Bellman optimality condition (见下节)。
 
-但 $D$ 本身是 RNN，它还可以透过 back-prop 进行学习，两者似乎是不同的。  Back-prop 是透过 $\frac{\partial \mathcal{E}}{\partial D}$ 的梯度来学习。
-
-\begin{center}
-\colorbox{grey}{\parbox{0.85\textwidth}{
-回顾一下 Bellman equation 是：
-$$ U(S) = \max_a \{ R(S,a) + U(S') \}$$
-$a$ 是对所有 actions。
-
-这个方程有微分版本，叫 Hamilton-Jacobi equation：
-\begin{eqnarray}
-U(t,x) &:=& \min_u \{ J(t,x,u) \} \nonumber \\
-J(t,x,u) &:=& \int_t^{t_1} L(s, x(s), u(s))ds + K(x(t_1)) \nonumber
-\end{eqnarray} 
-}}
-\end{center}
-
-在思维过程中，除了结果以外，其他步骤是没有奖励的，所以 reward 只可以是一个微小的负常数（代表时间损耗）。 在这情况下 Bellman 算法可能变到和 back-prop 一样，但我还未详细验算。
+但 $D$ 本身是 RNN，它还可以透过 back-prop 进行学习，两者似乎是不同的。  Back-prop 是透过 $\frac{\partial}{\partial D} \mbox{~error}$ 的梯度来学习。
 
 以下我们分别讲述 4 种学习模式：
 \begin{itemize}
@@ -161,6 +145,32 @@ J(t,x,u) &:=& \int_t^{t_1} L(s, x(s), u(s))ds + K(x(t_1)) \nonumber
 \item RL-based learning
 \item inductive learning
 \end{itemize}
+
+\section{Bellman equation}
+
+回顾一下 Bellman equation 是：
+$$ U(S) = \max_a \{ R(S,a) + \beta U(S') \}$$
+其中 $U$ = utility, $R$ = reward, $\beta$ = discount factor, $a$ = action, $S \stackrel{a}{\longrightarrow} S'$。 它是一条 recursive equation，表示本状态的最佳效用，是下一状态的效用，加上本状态的 reward，再取最优化。
+
+\begin{center}
+\colorbox{grey}{\parbox{0.95\textwidth}{\setlength{\parskip}{2.5ex}
+这个方程有\textbf{微分版本}，叫 Hamilton-Jacobi equation。 假设：
+$$ U(x,t) = \min_u \{ \int_t^{t'} C(x,u)dt + U(x',t') \} $$
+其中 $t$ 是时间，$u$ 是 control parameters，$C$ 是 cost-rate function：
+$$ \int C dt = R = \mbox{reward} $$
+这个积分表示「路径中的 cost」，$U(x',t')$ 是「终点的 cost」。
+
+这条方程写成微分形式就是 Hamilton-Jacobi equation:
+$$ \frac{d}{dt} U(x,t) = \min_u \{ C(x,u) + \nabla U(x,t) \cdot f(x,u) \} $$
+而 $x$ 必需遵从：
+$$ \dot{x}(t) = f(x(t),u(t)) $$
+这个方程的的形式很接近量子力学中的 Schr\"{o}dinger equation:
+$$ i \hbar \frac{\partial}{\partial t} \Psi(x,t) = \left[ V(x,t) + \frac{-\hbar^2}{2\mu} \nabla^2 \right] \Psi(x,t) $$
+$\Psi$ 类似於我们的 $U$（可能它是一个自然界想 minimize 的东西？）
+}}
+\end{center}
+
+在思维过程中，除了结果以外，其他步骤是没有奖励的，所以 reward 只可以是一个微小的负常数（代表时间损耗）。 在这情况下 Bellman 算法可能变到和 back-prop 差不多甚至一样，但我还未详细验算。
 
 \section{学习~听／讲}
 
@@ -187,7 +197,7 @@ K_0 \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & \mbox{输出句子} \quad \updo
 Actions:
 \begin{enumerate}[(A)]
 \item deduction (apply $D$)
-\item write / add to $K$ partially:  $K := K'$ or $K += K'$
+\item write / add to $K$ partially:  $K := K'$ or $K \mbox{+=} K'$
 \item learn = change $D$
 \item learn = neurogenesis
 \end{enumerate}
