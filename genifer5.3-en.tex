@@ -1,6 +1,7 @@
 % Todo:
 
 \documentclass[12pt]{article}
+\usepackage{amsmath}	% for \genfrac
 \usepackage[no-math]{fontspec}	% no-math option required for accents package
 \usepackage{hyperref}
 \usepackage{xeCJK}
@@ -15,7 +16,6 @@
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{amsfonts}
-% \usepackage{amsmath}	% for \tag
 \usepackage{amssymb}	% for \multimap
 % \usepackage{stmaryrd}
 \usepackage{color}
@@ -97,6 +97,9 @@
 \setlength{\parindent}{0em}
 \setlength{\parskip}{2.5ex plus0.5ex minus1.2ex}
 
+\setlength{\abovecaptionskip}{-10ex}
+\setlength{\belowcaptionskip}{-15ex}
+
 \section{Top-level architecture}
 
 在最高层面上，RL 控制 RNN：
@@ -107,104 +110,203 @@
 } }
 \end{center}
 
-可以想像，RNN 是 RL 的 ``mental model''； 换句话说，我们的 RL 比普通 RL 有更复杂的内部模型。
+可以想像，RNN 是 RL 的 ``mental model''； 换句话说，我们的 RL 比普通 RL 有更复杂的\ds{内部模型}。
 
 馀下的工作是，定义 RL 的四个元素： states, actions, rewards, policy。
 
-\section{Unification of RL and RNN}
+\section{统一 RL 和 RNN}
 
-在统一 RL 和 RNN 的时候，我发现它们之间的关系非常简单：
-
-从\textbf{强化学习}的角度来看，我们需要学习的是这个 policy 函数：
-\begin{center}
+从\textbf{强化学习}的角度来看，我们需要学习的是这个 policy 函数： \par
+\begin{figure}[H]
+\centering
 \begin{tikzcd}[row sep=tiny]
 \mbox{policy : ~~state} \arrow[r, mapsto, "\scalebox{0.8}{action}"] & \mbox{state'}
 \end{tikzcd}
-\end{center}
-而 $K$ 可以看成是我们的 mental state，那么 RL 的 action 就是将 $K$ 变成 $K'$ 的作用，而那正是 $D$！
-\begin{center}
-\begin{tikzcd}[row sep=tiny]
-K \arrow[r, mapsto, "\scalebox{1.3}{$D$}"] & K'
+\end{figure}
+而 $K$ 可以看成是我们的 mental state，那么 RL 的 action 就是将 $K$ 变成 $K'$ 的作用。
+
+在我们的系统中，将 $K$ 变成 $K'$ 有两个方法，分别是 RNN 和 RL：\par
+\begin{figure}[H]
+\centering
+\begin{tikzcd}[column sep=huge]
+& K'_1 \arrow[dd, dashed, no head, "\scalebox{1.3}{$\approx$}"] \\
+K \arrow[ur, "\mbox{RL}"] \arrow[dr, "\mbox{RNN}"'] & \\
+& K'_2
 \end{tikzcd}
-\end{center}
-换句话说，$D$ 就是 policy。
+\end{figure}
+RL 是透过 action $a$ 作用在 $K$ 上，而 RNN 是用 $D$ 作用在 $K$ 上。
 
-从强化学习的角度看，某些推导过程的结果，可以给予奖励：
-\begin{center}
-\begin{tikzcd}[row sep=tiny]
-K_0 \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & K_\bot \quad \updownarrow \bigstar
+\textbf{注意}： RNN 和 RL 都是学习算法，若将他们同时应用在同一问题上，必然会导致 conflicts，除非有方法把两种学习算法合并。
+
+假设学习是正确的话，$K'_1$ 和 $K'_2$ 应该是大致相同的 \textemdash~ 但这忽略了一个可能性，就是其中一条路径经过很多步以后才到达相近的终点。\footnote{这情况在 term rewriting systems (TRS) 中已经被研究过； 如果在 TRS 中任何两个不同的 rewriting 路径都必然会 converge 到同一结果，则叫做有 Church-Rosser property。 例如 Church 发明的 $\lambda$-calculus 有这个性质。} 
+
+现在我假设 $D$ 的结构是比较「微细」的，亦即要 $D^n$ 次才等於一个 $a$：
+\begin{figure}[H]
+\centering
+\begin{tikzcd}[column sep=huge]
+& K'_1 \arrow[dd, dashed, no head, "\scalebox{1.3}{$\approx$}"] \\
+K \arrow[ur, "\scalebox{1.3}{$a$}"] \arrow[dr, "{\scalebox{1.3}{$D^n$}}"'] & \\
+& K'_2
 \end{tikzcd}
-\end{center}
-$\updownarrow \bigstar$ 的意思是「给予正或负奖励」。  我们要学习的是 $D$ 也就是 policy。  学习算法的基础是著名的 Bellman optimality condition (见下节)。
+\end{figure}
+用另一个方法表示，$a$ 是 $D^n$ 在 $K$ 点的一个 section（切片）： $a = D^n|_K$。
 
-但 $D$ 本身是 RNN，它还可以透过 back-prop 进行学习，两者似乎是不同的。  Back-prop 是透过 $\frac{\partial}{\partial D} \mbox{~error}$ 的梯度来学习。
+问题是 RNN 和 RL 这两条路径究竟有没有本质上的分别？
+\begin{itemize}
+\item 它们内部的 representation 不同： RNN 是一个多层的神经网络，但 RL 的 representation 是 $Q(\mbox{state},\mbox{action})$，虽然 $Q$ 本身也可以用神经网络实现。
+\item RL 是透过 reward 学习，RNN 是透过 error 学习。 RL 的适用性较广，因为并不是所有问题都有「正确答案」可以用误差去衡量，但在 RL 中我们只需要在良好行为出现时加以赞赏。
+\item 或许我们应该用 RL 指导 RNN 的学习（RNN 是更 fine-grain 的）....
+\end{itemize}
 
-以下我们分别讲述 4 种学习模式：
+% 整体来说，RL 可以操控的 actions 包括：
+% \begin{enumerate}[\tab (A)]
+% \item apply $K \stackrel{D}{\mapsto} K'$ \par
+% 但注意： $K$ 是认知状态，$D$ 是对 $K$ 进行「合乎逻辑的推论」。 所以，无论发生什么事，我们都会将 $D$ 作用在 $K$ 上几次。 换句话说，$D$ 是\ds{必然}进行的动作，或者可以看成是在\ds{背景}下进行的运作，所以不需要用 RL 学习。 %RL 的用处是学习如何在很多 actions 之间选择最好的一个，所以 $D$ 不是 RL 需要学习的 action，它只是。
+
+% \item 改写认知状态 $K \mapsto K'$ \par
+% RL 的 actions (A) 是
+% 在思考过程中改变 $K$ 的值。 例如我们得到一个局部结论，这个局部结论的状态不是最终答案，但也比什么都没有的效用更高。 改写 $K$ 的方法可以是： 例如 将 $K \mbox{ += } \delta K$，或者 「if $K \in$ 某 region，then $K \mbox{ += } \delta K $」。
+
+% \item 学习： change $D$ \par
+
+从强化学习的角度看，某些推导过程的结果，可以给予奖励： \par
+\begin{figure}[H]
+\centering
+\begin{tikzcd}[row sep=tiny]
+K_0 \arrow[r, mapsto, "\scalebox{1.3}{$a$}"] & K_\bot \quad \updownarrow \bigstar
+\end{tikzcd}
+\end{figure}
+$\updownarrow \bigstar$ 的意思是「给予正或负奖励」。  我们要学习的是 $a$ 也就是 action。  学习算法的基础是著名的 Bellman optimality condition (见下节)。
+
+学习的过程可以是 ``interlaced''： 每做一次 RL，做 $n$ 次 RNN。
+
+% 但 $D$ 本身是 RNN，它还可以透过 back-prop 进行学习，两者似乎是不同的。  Back-prop 是透过 $\frac{\partial}{\partial D}(\mbox{error})$ 的梯度来学习。
+
+RNN 的学习还可以包括 \textbf{neurogenesis} (增加 RNN 的神经元)，但我暂时未想到这方面。
+
+% RNN 的 $D$ 也是将 $K$ 变成 $K'$ 的作用：\par
+%\begin{figure}[h]
+%\centering
+%\begin{tikzcd}[row sep=tiny]
+%K \arrow[r, mapsto, "\scalebox{1.3}{$D$}"] & K'
+%\end{tikzcd}
+%\end{figure}
+% $D$ 和 RL 的 actions 是不一样的。
+
+有 4 种学习模式：
 \begin{itemize}
 \item 学习~听／讲
 \item RL-based learning
 \item inductive learning
 \end{itemize}
 
-\section{Bellman equation}
+\section{Bellman equation: the basis of RL}
 
 回顾一下 Bellman equation 是：
-$$ U(S) = \max_a \{ R(S,a) + \beta U(S') \}$$
-其中 $U$ = utility, $R$ = reward, $\beta$ = discount factor, $a$ = action, $S \stackrel{a}{\longrightarrow} S'$。 它是一条 recursive equation，表示本状态的最佳效用，是下一状态的效用，加上本状态的 reward，再取最优化。
+$$ U(S) = \max_a \{ R(S,a) + \gamma U(S') \}$$
+其中 $U$ = utility, $R$ = reward, $\gamma$ = discount factor, $a$ = action, $S \stackrel{a}{\mapsto} S'$。 它是一条 recursive equation，它表示本状态的最佳效用  $U(A)$，與下一状态的最佳效用 $U(S')$，之間的關係。
 
+\begin{figure}[!h!t!b!p]
 \begin{center}
 \colorbox{grey}{\parbox{0.95\textwidth}{\setlength{\parskip}{2.5ex}
-这个方程有\textbf{微分版本}，叫 Hamilton-Jacobi equation。 假设：
+離題一點： Bellman 方程有\textbf{微分版本}，叫 Hamilton-Jacobi 方程，现在两者可以统一为 Hamilton-Jacobi-Bellman 方程。
+
+定义连续的 ``utility''：
 $$ U(x,t) = \min_u \{ \int_t^{t'} C(x,u)dt + U(x',t') \} $$
 其中 $t$ 是时间，$u$ 是 control parameters，$C$ 是 cost-rate function：
 $$ \int C dt = R = \mbox{reward} $$
 这个积分表示「路径中的 cost」，$U(x',t')$ 是「终点的 cost」。
 
-这条方程写成微分形式就是 Hamilton-Jacobi equation:
-$$ \frac{d}{dt} U(x,t) = \min_u \{ C(x,u) + \nabla U(x,t) \cdot f(x,u) \} $$
+这条方程写成微分形式就是 Hamilton-Jacobi 方程：
+$$ \frac{d}{dt} U(x,t) = \min_u \{ C(x,u) + \langle \nabla U(x,t), f(x,u) \rangle \} $$
 而 $x$ 必需遵从：
 $$ \dot{x}(t) = f(x(t),u(t)) $$
-这个方程的的形式很接近量子力学中的 Schr\"{o}dinger equation:
+
+这个方程的的形式很接近量子力学中的 Schr\"{o}dinger 方程：
 $$ i \hbar \frac{\partial}{\partial t} \Psi(x,t) = \left[ V(x,t) + \frac{-\hbar^2}{2\mu} \nabla^2 \right] \Psi(x,t) $$
 $\Psi$ 类似於我们的 $U$（可能它是一个自然界想 minimize 的东西？）
 }}
 \end{center}
+\end{figure}
 
-在思维过程中，除了结果以外，其他步骤是没有奖励的，所以 reward 只可以是一个微小的负常数（代表时间损耗）。 在这情况下 Bellman 算法可能变到和 back-prop 差不多甚至一样，但我还未详细验算。
+% 在思维过程中，除了结果以外，其他步骤是没有奖励的，所以 reward 只可以是一个微小的负常数（代表时间损耗）:
+% $$ R(S,a) \equiv -\epsilon \quad \mbox{(except for final states)}$$
+% 在这情况下 Bellman 算法可能变到和 back-prop 差不多，甚至等价？
+
+在我们的 architecture 里，$K$ 就是 state，作用在 $K$ 上的 action 永远是 $D$ = RNN，但 $D$ 可以變化，$\mathbf{D} \ni D$ 是所有 RNN 的 weights 的空间。 
+
+$ U: \mathbf{S} \rightarrow \mathbb{R} $ 是一个给出 mental states 的\textbf{效用}的函数，这是强化学习中独有的。 对了！ 这就是强化学习和 back-prop 不同的地方！  有些 mental states 虽然不是最终答案，但它们的效用相对地比较高。 或许我们可以另外建立一个神经网络去 approximate 效用函数 $U(\mbox{state})$ 或 $Q(\mbox{state},\mbox{action})$。
+
+RL 的做法是： 每个 cycle，我们 apply $D$ （例如说，10 次），然后得到新的 $K$。 然后我们计算：
+$$ \mbox{action} = \arg\max_a Q(K,a) $$
+亦即是根据 $Q$ 值选取最佳 action。 注意： 函数 $Q$ 是用一个外在的 neural network 近似地学习的，然后我们要找 $Q$ 的 maximum，那本身需要另一个 optimization process（见附录），而且必需很快，这可能是整个系统的瓶颈。
+
+至於 $Q(K,a)$ 的学习，基本的 update rule 是：
+$$ Q(K,a) \;\mbox{ += }\; \eta (R(K,a) + \gamma \max_{\hat{a}} Q(K',\hat{a})) $$
+其中 $\eta$ 控制学习速度。 
 
 \section{学习~听／讲}
 
-我发现~听／讲~是可以靠 RL 学习的。
+我发现~听／讲~是可以靠 RL 学习的:
 
-Learning modes:
 \begin{enumerate}
-\item Listening:  $K$ contains understanding of linguistic input, test $K$
-\item Speaking:  $K$ is known, $\mbox{output} \approx_{L} K$
+\item 学习听:
+$$ \stackrel{\checkmark}{\mbox{输入句子}} \, \stackrel{?}{\longrightarrow} \, K \stackrel{{\color{red}\mbox{讲}}}{\longrightarrow} \, \mbox{输出句子} \, \approx_L \, \stackrel{\checkmark}{\mbox{testers}} $$
+\item 学习讲: 
+$$ \stackrel{\checkmark}{\mbox{输入句子}} \, \stackrel{{\color{red}\mbox{听}}} {\longrightarrow} \, K \, \stackrel{?}{\longrightarrow} \, \mbox{输出句子} \, \approx_L \, \stackrel{\checkmark}{\mbox{testers}} $$
 \end{enumerate}
 
-\begin{center}
+$\checkmark$ 代表已知的 data （= training set），? 是我们想学习的 map，红色代表 inter-dependence （听和讲的 maps 在学习中互相依赖），$\approx_L$ 比较两句句子的表面近似度，它是外在的 function。 Testers 是一些自然语言句子，用来试验听和讲的正确性。
+
+这似乎是一个如何设计 training regimen 的问题多於算法的问题。
+
+算法方面，举例来说，假设 K 已经是 prepared，
+\begin{figure}[H]
+\centering
 \begin{tikzcd}[row sep=tiny]
-K_0 \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & \mbox{输出句子} \quad \updownarrow \bigstar
+\stackrel{\checkmark}{K} \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & \mbox{输出句子} \quad \updownarrow \bigstar
 \end{tikzcd}
-\end{center}
-
-\section{RL-based learning}
-
-
+\end{figure}
+....
 
 \section{Inductive learning}
 
-Actions:
-\begin{enumerate}[(A)]
-\item deduction (apply $D$)
-\item write / add to $K$ partially:  $K := K'$ or $K \mbox{+=} K'$
-\item learn = change $D$
-\item learn = neurogenesis
-\end{enumerate}
+以前已经讲过，用 back-prop 做，没有特别困难。   Back-prop 和 RL 是独立的。
 
+\section*{Appendix: Finding maximum in a back-prop NN}
+
+\textbf{Problem statement}:  We have used back-prop to train a neural network to approximate $Q(K,a)$.  But we don't have the explicit form of Q;  Q is realized \textit{implicitly} in the NN.  Now we need to find $\arg\max_a Q(K,a)$.
+
+We can use \textbf{gradient descent} to find the (local) maxima, and repeat this over randomly-chosen starting points.  After many trials the result will approach global maximum.
+
+The gradient descent \textbf{update rule} is:
+$$ x^{k+1} = x^k - \eta \nabla y(x^k). $$
+
+This process is quite similar to back-prop, with the difference that back-prop uses the gradient $\frac{\partial \mathcal{E}}{\partial W}$ whereas here we use the gradient $\frac{\partial y}{\partial x}$.
+
+For each layer,
+$$ y_j = \sigmoid( \sum W_{ji} x_i ) $$
+and the overall output is:
+$$ y = y_J \circ y_{J-1} \circ .... \, y_0 (x). $$
+$J$ is the number of hidden layers.
+
+We then calculate
+$$ \nabla y = \left[ \frac{\partial y}{\partial x_l} \right] =
+\frac{\partial y_J}{\partial y_{J-1}}
+\frac{\partial y_{J-1}}{\partial y_{J-2}} .... \,
+\frac{\partial y_0}{\partial x_l} $$
+% $$ =
+% \frac{\partial y_J}{\partial y_{J-1}}(y_{J-1})
+% \frac{\partial y_{J-1}}{\partial y_{J-2}}(y_{J-2}) .... \,
+% \frac{\partial y_1}{\partial y_0}(y_0)
+% \frac{\partial y_0}{\partial x}(x). $$
+At each step, we move a small amount in this direction.  But the above direct calculation of $\nabla y$ seems very complicated.  An alternative is to use \textbf{numerical differentiation}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-{\color{red}\rule{10cm}{2pt}}
+% {\color{red}\rule{10cm}{2pt}}
+
+\begin{comment}
+%===========================================================================
 
 上次的模型：
 \begin{figure}[H]
@@ -314,8 +416,6 @@ $$ K_0 \stackrel{D}{\longrightarrow} .... \; K^* $$
 
 因为我们可以用 $K = \mathcal{L}(\mbox{自然语言句子})$ 来计算 $K_0$ 和 $K^*$，所以这个算法是可行的。
 
-\begin{comment}
-%===========================================================================
 \section{RNN}
 
 整个 Genifer 系统包含 RL + RNN 两部分。
@@ -435,9 +535,7 @@ $K$ 的内容基本上是无限制的，所以可以有近乎无限的 actions�
 %===========================================================================
 \end{comment} 
 
-% \section*{Acknowledgments}
-
-\bibliographystyle{plain} % or number or aaai ...
-\bibliography{AGI-book}
+% \bibliographystyle{plain} % or number or aaai ...
+% \bibliography{AGI-book}
 
 \end{document}
