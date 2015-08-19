@@ -77,16 +77,12 @@
 \newcommand*\sadface{\includegraphics[scale=0.25]{face-sad.png}}
 \newcommand*\smiley{\includegraphics[scale=0.5]{smiley.jpg}}
 
-\setlength{\oddsidemargin}{1cm}
-\setlength{\evensidemargin}{1cm}
-\setlength{\textwidth}{14cm}
-
-\linespread{1.2}
-
 \title{\textcolor{blue}{Genifer 5.3 theoretical notes}}
 \author{YKY (甄景贤)}
 %% \date{30 June 2015}
 %% \institute{}
+
+\overfullrule=1mm
 
 \begin{document}
 
@@ -99,14 +95,24 @@
 
 % \sffamily
 
-{\let\newpage\relax\maketitle}
+% {\let\newpage\relax\maketitle}
 
 \maketitle
 \setlength{\parindent}{0em}
 \setlength{\parskip}{2.5ex plus0.5ex minus1.2ex}
 
+\begin{abstract}
+This is a completely new architecture: a long vector represents the cognitive state of the Reasoner, where a ``recurrent'' neural network acts on it to yield the new cognitive state.  This corresponds to a logical inference step in the classical paradigm.  A top-level reinforcement learner controls this Reasoner, having access to its cognitive states.
+\end{abstract}
+
 \setlength{\abovecaptionskip}{-10ex}
 \setlength{\belowcaptionskip}{-18ex}
+
+\setlength{\oddsidemargin}{1cm}
+\setlength{\evensidemargin}{1cm}
+\setlength{\textwidth}{14cm}
+
+\linespread{1.2}
 
 \section{Cognitive states}
 
@@ -161,7 +167,7 @@ where $\mathcal{L}$ is the ``\textbf{natural-language map}''.  As we shall see, 
 
 The use of an RNN to act on the cognitive state vector is a radical departure from classical logic-based AI.  There is nothing in the new system that directly corresponds to propositions in classical logic.  For example, Genifer may believe that ``I should not be superstitious", but there may be nothing in the RNN or in $K$ that corresponds to the \textit{symbolic} representation of such a sentence.  If Genifer utters the sentence ``I should not be superstitious", it is \textit{generated} from the cognitive dynamics of the RNN.
 
-Moreover, $D$ no longer needs to correspond to \textit{single} steps of logical inference.  Our formulation implicitly relaxed the requirement of $D$ so that it could be a ``\textbf{fractional}'' or even ``\textbf{infinitesimal}'' inference step.  The latter case might involve Lie groups or algebras, something I have not explored yet.
+Moreover, $D$ no longer needs to correspond to \textit{single} steps of logical inference.  Our formulation implicitly relaxed the requirement so that $D$ could be ``\textbf{fractional}'' or even ``\textbf{infinitesimal}'' inference steps.  The latter case might involve Lie groups or algebras, something I have not explored yet.
 
 \section{Language map}
 
@@ -287,7 +293,7 @@ Now the question is, do the RNN and RL paths have any \textit{essential} differe
 \begin{itemize}
 \item Their internal \textbf{representations} are different:\\
 \dashh RNN is a multi-layer neural network\\
-\dashh RL's representation is $Q(\mbox{state},\mbox{action})$, even though $Q$ could be approximated by a neural network as well.
+\dashh RL's representation is $Q(\mbox{state},\mbox{action})$, although $Q$ could be approximated by a neural network as well.
 \item RL learns through \textbf{rewards}, RNN learns from \textbf{errors}.  Thus RL has broader applicability, because not all questions have ``correct answers'' that could be measured by errors.  In RL we just need to praise Genifer whenever she displays good behavior.
 \item The internal cognitive state $K$ exists because of RNN:  it is simply the vector input and output of the RNN.  Without this $K$, RL would be clueless as to what are its internal states.  It can be said that the RNN provides a \textit{machinery} for RL to control.
 \end{itemize}
@@ -390,7 +396,7 @@ where $\eta$ controls the learning speed.
 \section{Learning to listen / talk}
 \label{sec:learning-to-listen-talk}
 
-I realized that learning to listen/talk can be handled by RL:
+Learning to listen/talk can be handled by RL:
 
 \begin{enumerate}
 \item learning to listen:
@@ -416,45 +422,60 @@ we can invoke the RL
 
 \section{Inductive learning}
 
-举例：\\
-\tab 小明是香港人 $\wedge$ 小明戴眼镜 \\
-\tab 小强是香港人 $\wedge$ 小强戴眼镜 \\
-\tab 小雄是香港人 $\wedge$ 小雄戴眼镜 \\
-\tab 小娟是香港人 $\wedge$ 小娟戴眼镜 \\
-\tab 结论： 所有香港人都戴眼镜 \\
-用逻辑表示这法则就是：
-$$ \forall X. \; \mbox{Hong-Kong}(X) \Rightarrow \mbox{wear-glasses}(X) $$
-但在 RNN 里，这法则是暗含在 $D$ 之中。 例如如果 $k = \mbox{「大强是香港人」}$，那么 $D$ 作用在 $K$ 上最终会得出 $K' = \mbox{「大强戴眼镜」}$。
+For example:\\
+\tab John is Chinese $\wedge$ John wears glasses \\
+\tab Pete is Chinese $\wedge$ Pete wears glasses \\
+\tab Mary is Chinese $\wedge$ Mary wears glasses \\
+\tab Paul is Chinese $\wedge$ Paul wears glasses \\
+\tab Conclusion: all Chinese people wear glasses \\
+Expressed as a logical rule this is:
+$$ \forall X. \; \mbox{Chinese}(X) \Rightarrow \mbox{wear-glasses}(X) $$
+but this rule is implicitly encoded in $D$ by the RNN.  For example, if $K = \mbox{``Jane is Chinese''}$, then $D$ acting on $K$ would eventually result in $K' = \mbox{``Jane wears glasses''}$.
 
-换句话说，已知 $K_0$，$K^*$，学习 $D$：
+In other words, given $K_0$，$K^*$, learn $D$ such that:
 $$ K_0 \stackrel{D}{\longrightarrow} .... \; K^* $$
 
-因为我们可以用 $K = \mathcal{L}(\mbox{自然语言句子})$ 来计算 $K_0$ 和 $K^*$，所以这个算法是可行的。
+If we have the map $\mathcal{L}$, we could use $K = \mathcal{L}(\mbox{NL sentence})$ to calculate $K_0$ and $K^*$, and this would be feasible.
 
-\subsection{Learning}
-
-Learning 是通过 back-prop，我们要求的是从 $K_0$ 开始：
+Learning is done via back-prop, what we need is to start from $K_0$:
 \begin{eqnarray}
-K_0 \stackrel{D}{\longrightarrow} .... \; K_\infty \nonumber \\
-K_\infty \ge K^*
+K_0 \stackrel{D}{\longrightarrow} .... \; K_\vdash \nonumber \\
+K_\vdash \ge K^* \nonumber
 \end{eqnarray}
-但这里需要用到 $\ge$ 关系，下述。
+but this requires using the $\ge$ relation, discussed below.
 
-目的是学习 $D$，令误差 $\mathcal{E}$ 最少。
+The goal is to learn $D$, to minimize the error $\mathcal{E} = K_\vdash - K^*$.
 
-梯度 $\frac{\partial \mathcal{E}}{\partial W}$ 的计算应该是可行的； 这里 $W$ 是 RNN 的 weights。
+The calculation of the gradient $\frac{\partial \mathcal{E}}{\partial W}$ should be feasible;  here $W$ is the weights of the RNN.
 
-但怎样计算 $\mathcal{E} = K_\infty - K^*$ ？  有个严重问题是： 我们要知道 $K^*$ 的知识的表达方式，但如果 $D$ 是个 black box，$K^*$ 的 representation 就不是透明的。
+% But how do we calculate $\mathcal{E} = K_\vdash - K^*$?  There is a severe problem: we need to know the representation of $K^*$, but if $D$ is a \textit{black box}, the representation of $K^*$ would be \textit{opaque}.
 
-可以看成是这个问题：
+\section{Querying}
+
+Perhaps querying can be formulated as this problem:
 \begin{eqnarray}
 \mbox{solve}\quad\quad D^n(\mathbf{x}) & > & K^* \nonumber \\
-K_0 & \ge & \mathbf{x}
+K_0 & \ge & \mathbf{x} \nonumber
 \end{eqnarray}
-其中 $\mathbf{x}$ 是变量。 我们要求 $>$ 是大於某个 threshold $\epsilon$。  这是一条 iterative equation，似乎还有希望。
+where $\mathbf{x}$ is the variable.  We require $>$ to exceed a threshold $\epsilon$.  This is an iterative equation, which seems hopeful.
 
-上次说过如果 D 是 monotonous，即 $\forall \mathbf{x} \; D(\mathbf{x}) \ge \mathbf{x}$，可能有帮助。
+If $D$ is \textbf{monotonous}, ie, $\forall \mathbf{x} \; D(\mathbf{x}) \ge \mathbf{x}$, this fact may be exploited to design faster algorithms.
 
+\section{The \texorpdfstring{$\ge$}{>} relation}
+
+$\ge$ is the \textbf{implication order} in logic (also similar to the \textbf{general-specific order}), it has 2 forms:
+\begin{itemize}
+\item all men are mortal $\ge$ Socrates is mortal
+\item all men are mortal $\ge$ (all men are mortal $\wedge$ the moon is round)
+\end{itemize}
+
+In (topological) vector space theory, we can define a relation $\mathbf{v}_1 \ge \mathbf{v}_2$ between vectors, by selecting an arbitrary \textbf{cone} $C$:
+$$ \mathbf{v}_1 \ge \mathbf{v}_2 \Leftrightarrow (\mathbf{v}_1 - \mathbf{v}_2) \in C $$
+For example, on the 2D plane, $C$ could be the upper-right quadrant.
+
+I am considering:  Can we just arbitrarily select a cone in the space $\mathbf{K}$ to define $\ge$, and then let the RNN learn the logical structure of $\ge$ itself (for example, animals $\ge $ cats, $A \ge A \wedge B$, etc)?
+
+\setlength{\emergencystretch}{10pt}
 \section*{Appendix: Finding maximum in a back-prop NN}
 
 \textbf{Problem statement}:  We have used back-prop to train a neural network to approximate $Q(K,a)$.  But we don't have the explicit form of Q;  Q is realized \textit{implicitly} in the NN.  Now we need to find $\arg\max_a Q(K,a)$.
@@ -490,19 +511,6 @@ At each step, we move a small amount in this direction.  But the above direct ca
 \begin{comment}
 %===========================================================================
 
-\subsection{\texorpdfstring{$\ge$}{>} 关系}
-
-$\ge$ 是逻辑中的「generalize」关系，它有两种模式：
-\begin{itemize}
-\item 人会死 $\ge$ Socrates 会死
-\item 人会死 $\ge$ ( 人会死 $\wedge$ 月亮是圆的 ~)
-\end{itemize}
-
-在 (topological) vector space 理论里，我们可以定义 vector 之间的 $\mathbf{v}_1 \ge \mathbf{v}_2$，方法是选取任何一个 cone （锥形）$C$：
-$$ \mathbf{v}_1 \ge \mathbf{v}_2 \Leftrightarrow (\mathbf{v}_1 - \mathbf{v}_2) \in C $$
-例如如果在平面上，$C$ 可以是右上角的 quadrant。
-
-我在考虑： 我们可不可以选取任何一个在 $\mathbf{K}$ 空间中的 cone 来定义 $\ge$，然后让 RNN 自己学习 $\ge$ 的逻辑结构（例如~ 动物 $\ge $ 猫、$A \ge A \wedge B$）？
 
 %===========================================================================
 \end{comment} 
