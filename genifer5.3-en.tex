@@ -157,17 +157,24 @@ The cognitive state vector $K$ could be like this:
 \end{figure}
 
 The general operation of Genifer could be like this:
-\begin{center}
+\begin{equation}
 \begin{tikzcd}%[column sep=small]
 \mbox{sentence input}\arrow[r,"\scalebox{1.3}{$\mathcal{L}$}"] & \mathbf{K} \arrow[r,"\scalebox{1.3}{$\mathcal{L}^{-1}$}"] \arrow[loop,"\scalebox{1.3}{$D$}",swap,looseness=4] & \mbox{sentence output}
 % S\arrow{r} & K\arrow{r}\arrow{r}{loop,"D"} & S
 \end{tikzcd}
-\end{center}
+\end{equation}
 where $\mathcal{L}$ is the ``\textbf{natural-language map}''.  As we shall see, $\mathcal{L}$ is not really needed.
 
 The use of an RNN to act on the cognitive state vector is a radical departure from classical logic-based AI.  There is nothing in the new system that directly corresponds to propositions in classical logic.  For example, Genifer may believe that ``I should not be superstitious", but there may be nothing in the RNN or in $K$ that corresponds to the \textit{symbolic} representation of such a sentence.  If Genifer utters the sentence ``I should not be superstitious", it is \textit{generated} from the cognitive dynamics of the RNN.
 
 Moreover, $D$ no longer needs to correspond to \textit{single} steps of logical inference.  Our formulation implicitly relaxed the requirement so that $D$ could be ``\textbf{fractional}'' or even ``\textbf{infinitesimal}'' inference steps.  The latter case might involve Lie groups or algebras, something I have not explored yet.
+
+The preference for distributive, vector-space representations is partly inspired by the success of \textbf{Word2Vec} (2013), although I have been exploring matrix representations of logic around the same time.  The revelation that that came to me from Word2Vec is this:
+\begin{equation}
+\label{eq:word2vec}
+\mbox{king} : \mbox{queen} \;\approx\; \mbox{man} : \mbox{woman}.
+\end{equation}
+When I was working on logic, I tried to use the relations $\subseteq$ and $\in$ to clusterize all knowledge into an ontology.  But (\ref{eq:word2vec}) contains the notion of ``opposites'' (x : y) that cannot be expressed by $\subseteq$ alone, yet it was discovered by Word2Vec automatically.  This made me realize that, even painstakingly designing a set of logical primitives to account for all knowledge, is inferior to using \textit{statistical learning} to discover structures.
 
 \section{Language map}
 
@@ -176,33 +183,33 @@ Genifer is not the first model that uses an RNN to model logical reasoning.  My 
 $\mathcal{L}$ turns NL sentences into internal representation of knowledge in $\mathbf{K}$, where $\mathbf{K} \ni K$ is the space of all cognitive states:
 \begin{eqnarray}
 \mathcal{L} :& \mathbf{S} & \rightarrow \mathbf{K} \nonumber \\
-\mathcal{L} :& \mbox{sentence} & \mapsto K \nonumber
+\mathcal{L} :& \mbox{sentence} & \mapsto K
 \end{eqnarray}
 (Actually the sentence representation is just a part of $K$.)
 
-\begin{center}
-\begin{tikzcd}%[column sep=small]
+\begin{equation}
+\begin{tikzcd}
 \mbox{sentence input}\arrow[r,"\scalebox{1.3}{$\mathcal{L}$}"] & \mathbf{K} \arrow[r,"\scalebox{1.3}{$\mathcal{L}^{-1}$}"] \arrow[loop,"\scalebox{1.3}{$D$}",swap,looseness=4] & \mbox{sentence output}
 \end{tikzcd}
-\end{center}
+\end{equation}
 
 Having this \textbf{language map} is very convenient, but it has a few problems:
 \begin{itemize}
 
 \item it requires NLP parsing, which is troublesome; better if we could avoid it
 
-\item the map $\mathcal{L}$ basically \textit{fixed} the internal knowledge representation format.  But my intuition is that the knowledge representation should better be ``unknown'', it should be \textit{induced} through the learning process of $D$.
+\item the map $\mathcal{L}$ basically \textit{fixed} the internal knowledge representation format, but my intuition is that the knowledge representation should better be ``unknown''.  It should be \textit{induced} through the learning process of $D$.
 
 In traditional logic-based systems, $K$ = KB is a collection of logical propositions, $ K = \bigsqcup P_i $.  At that time, we tried to organize the KB hierarchically, so as to speed up searching and retrieval.  But I feel that if the structure of $\mathbf{K}$ is also the same, it would be ``too similar'' to the original setting, and everything is ``too orderly'', which may not be the best way to apply neural networks.
 
-\item Natural langauge requires slow ``absorption'' or ``comprehension'', but this process is ignored in the Memory Network model.  Translation of NL sentences into logical form (ie, the internal representation) can almost be done \textit{instantaneous\-ly}.  But if we input the raw text of a \textit{World History} book to Genifer, and she translated it into internal representation within 1 second, can we say that Genifer has truly ``understood'' the content of the book?
+\item Natural language requires slow ``absorption'' or ``comprehension'', but this process is ignored in the Memory Network model.  Translation of NL sentences into logical form (ie, internal representation) can almost be done \textit{instantaneous\-ly}.  But if we input the raw text of a \textit{World History} book to Genifer, and she translated it into internal representation within 1 second, can we say that Genifer has truly ``understood'' the content of the book?
 
 \end{itemize}
 
 \section{Slow comprehension}
 % \label{language-comprehension}
 
-Therefore $\mathcal{L}$ is not an ordinary map but a very complex \textit{process}.
+Thus $\mathcal{L}$ is not an ordinary map but a very complex \textit{process}.
 
 The ``slow absorption'' of new input consists of these operations:
 \begin{itemize}
@@ -212,24 +219,26 @@ The ``slow absorption'' of new input consists of these operations:
 \end{itemize}
 
 The process of ``comprehension'' can be realized as the transformation of $K$ into a ``knowing'' state $K'$ after $n$ steps of inference:
-\begin{center}
+\begin{equation}
 \begin{tikzcd}[row sep=tiny]
 K \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & K'
 \end{tikzcd}
-\end{center}
+\end{equation}
 % $$ K \stackrel{D^n}{\mapsto} K' $$
 and we want $K'$ to possess the desired properties (consequence, coherence, explanation).  The question is how to test if $K'$ has such properties?  Particular difficulty stems from the fact that the representation of $K' \in \mathbf{K}$ is \textit{not transparent}.
 
 To test the content of $K'$ we need a query $Q$:
-\begin{center}
+\begin{equation}
 \begin{tikzcd}[row sep=tiny]
 K \arrow[r, mapsto, "\scalebox{1.3}{$D^n$}"] & K' \stackrel{?}{\;=\;} Q
 \end{tikzcd}
-\end{center}
+\end{equation}
 
 If we have $\mathcal{L}$, we can directly ask in natural language, via the query $Q = \mathcal{L}(\mbox{sentence})$, to test $K$.  In other words, the advantage of $\mathcal{L}$ is to allow \textit{direct access} to $K$, so that we can read out or write to the cognitive state.  But a simple $\mathcal{L}$ map does not exist in reality.
 
-But all is not lost:  One advantage of a neural network is that it can simultaneously learn 2 processes, even if the 2 processes are \textit{inter-dependent}!  In \S\ref{sec:learning-to-listen-talk} we look at how to learn to listen and talk.
+Learning to listen requires the ability to talk;  learning to talk requires the ability to listen.
+
+But all is not lost:  One advantage of a neural network is that it can simultaneously learn 2 processes, even if the 2 processes are \textit{inter-dependent}!  In \S\ref{sec:learning-to-listen-talk} we look at this issue again.
 
 \section{Top-level architecture}
 
@@ -255,45 +264,42 @@ The remaining work is to define the 4 elements of RL: \textbf{states}, \textbf{a
 \section{Unifying RL and RNN}
 
 From the viewpoint of reinforcement learning, we aim to learn the \textbf{policy} function: \par
-\begin{figure}[H]
-\centering
+\begin{equation}
 \begin{tikzcd}[]
 \mbox{policy : ~~state} \arrow[r, mapsto, "\scalebox{0.8}{action}"] & \mbox{state'}
 \end{tikzcd}
-\end{figure}
-Where $K$ can be regarded as the \textbf{mental state}, and thus an \textbf{action} in RL is to turn $K$ into $K'$.
+\end{equation}
+Where $K$ can be regarded as the \textbf{mental state}, and thus an \textbf{action} in RL turns $K$ into $K'$.
 
-In our system, there are 2 pathways to act on $K$, via RNN and RL respectively: \par
-\begin{figure}[H]
-\centering
+In our system, there are 2 pathways that act on $K$, via RNN and RL respectively: \par
+\begin{equation}
 \begin{tikzcd}[column sep=huge]
 & K'_1 \arrow[dd, dashed, no head, "\scalebox{1.3}{$\approx$}"] \\
 K \arrow[ur, "\mbox{RL}"] \arrow[dr, "\mbox{RNN}"'] & \\
 & K'_2
 \end{tikzcd}
-\end{figure}
+\end{equation}
 In RL, the action $a$ acts on $K$, whereas in RNN, $D$ acts on $K$.
 
 \textbf{Note}： RNN and RL are learning algorithms, and if they are both applied to the same problem, conflicts will necessarily arise, unless there is a way to combine them.
 
 Assuming the learning is correct, $K'_1$ and $K'_2$ should be roughly the same \textemdash~ but this ignored the possibility that one path may take multiple steps to converge with the other path.  \footnote{This situation has been encountered in term rewriting systems (TRS):  If in a TRS any 2 different rewriting paths always converge to the same result, it is said to have the \textbf{Church-Rosser property}.  For example the $\lambda$-calculus invented by Church has this property.} 
 
-Now I stipulate that $D$ be more ``refined'', that is to say, applying $D^n$ times may be equivalent to applying $a$ once：
-\begin{figure}[H]
-\centering
+Now I stipulate that $D$ be more ``refined'', that is to say, applying $D^n$ times may be equivalent to applying $a$ once:
+\begin{equation}
 \begin{tikzcd}[column sep=huge]
 & K'_1 \arrow[dd, dashed, no head, "\scalebox{1.3}{$\approx$}"] \\
 K \arrow[ur, "\scalebox{1.3}{$a$}"] \arrow[dr, "{\scalebox{1.3}{$D^n$}}"'] & \\
 & K'_2
 \end{tikzcd}
-\end{figure}
+\end{equation}
 Using a different notation, $a$ is the \textbf{restriction} or \textbf{section} of $D^n$ at point $K$: $a = D^n|_K$.
 
 Now the question is, do the RNN and RL paths have any \textit{essential} difference?
 \begin{itemize}
-\item Their internal \textbf{representations} are different:\\
-\dashh RNN is a multi-layer neural network\\
-\dashh RL's representation is $Q(\mbox{state},\mbox{action})$, although $Q$ could be approximated by a neural network as well.
+\item Their internal \textbf{representations} are different:\par
+\dashh RNN is a multi-layer neural network\par
+\dashh RL's representation is $Q(\mbox{state},\mbox{action})$, usually stored as a \textit{look-up table}, although $Q$ could be approximated by a neural network as well.
 \item RL learns through \textbf{rewards}, RNN learns from \textbf{errors}.  Thus RL has broader applicability, because not all questions have ``correct answers'' that could be measured by errors.  In RL we just need to praise Genifer whenever she displays good behavior.
 \item The internal cognitive state $K$ exists because of RNN:  it is simply the vector input and output of the RNN.  Without this $K$, RL would be clueless as to what are its internal states.  It can be said that the RNN provides a \textit{machinery} for RL to control.
 \end{itemize}
@@ -314,12 +320,11 @@ Now the question is, do the RNN and RL paths have any \textit{essential} differe
 % \item 学习： change $D$ \par
 
 From the perspective of reinforcement learning, we could reward some results of multi-step inference: \par
-\begin{figure}[H]
-\centering
+\begin{equation}
 \begin{tikzcd}[row sep=tiny]
 K_0 \arrow[r, mapsto, "\scalebox{1.3}{$a$}"] & K_\vdash \quad \updownarrow \bigstar
 \end{tikzcd}
-\end{figure}
+\end{equation}
 $\updownarrow \bigstar$ means ``to give positive or negative rewards''.  We want to learn $a$ which is the action to be taken at state $K$.  The learning algorithm is based on the famous \textbf{Bellman optimality condition} (see next section).
 
 Perhaps we should use RL to \textit{guide} the learning in RNN, as RNN is more fine-grained....
@@ -349,7 +354,9 @@ There are 4 learning modes:
 \section{Bellman equation: the basis of RL}
 
 Let's review the Bellman equation:
-$$ U(S) = \max_a \{ R(S,a) + \gamma U(S') \}$$
+\begin{equation}
+ U(S) = \max_a \{ R(S,a) + \gamma U(S') \}
+\end{equation}
 where $U$ = utility, $R$ = reward, $\gamma$ = discount factor, $a$ = action, $S \stackrel{a}{\mapsto} S'$.  This is a recursive equation, expressing the relation between the optimal utility of the current state $U(A)$ and the optimal utility of the next state $U(S')$.
 
 \begin{figure}[!h!t!b!p]
@@ -358,18 +365,28 @@ where $U$ = utility, $R$ = reward, $\gamma$ = discount factor, $a$ = action, $S 
 A bit of digression:  The Bellman equation has a \textbf{differential version}, known as the \textbf{Hamilton-Jacobi} equation, and nowadays the 2 can be unified as the Hamilton-Jacobi-Bellman equation.
 
 Define a continuous version of ``utility'':
-$$ U(x,t) = \min_u \{ \int_t^{t'} C(x,u)dt + U(x',t') \} $$
+\begin{equation}
+U(x,t) = \min_u \{ \int_t^{t'} C(x,u)dt + U(x',t') \} 
+\end{equation}
 where $t$ is time, $u$ is a set of control parameters, $C$ is the \textbf{cost-rate} function:
-$$ \int C dt = R = \mbox{reward} $$
+\begin{equation}
+\int C dt = R = \mbox{reward}
+\end{equation}
 This integral expresses the ``cost of the path'', whereas $U(x',t')$ is the ``cost at termination''.
 
 The differential version is the Hamilton-Jacobi equation:
-$$ \frac{d}{dt} U(x,t) = \min_u \{ C(x,u) + \langle \nabla U(x,t), f(x,u) \rangle \} $$
+\begin{equation}
+\frac{d}{dt} U(x,t) = \min_u \{ C(x,u) + \langle \nabla U(x,t), f(x,u) \rangle \} 
+\end{equation}
 where $x$ must obey this dynamics:
-$$ \dot{x}(t) = f(x(t),u(t)). $$
+\begin{equation}
+\dot{x}(t) = f(x(t),u(t)).
+\end{equation}
 
 This equation is very close to the form of the \textbf{Schr\"{o}dinger} equation in quantum mechanics:
-$$ i \hbar \frac{\partial}{\partial t} \Psi(x,t) = \left[ V(x,t) + \frac{-\hbar^2}{2\mu} \nabla^2 \right] \Psi(x,t). $$
+\begin{equation}
+i \hbar \frac{\partial}{\partial t} \Psi(x,t) = \left[ V(x,t) + \frac{-\hbar^2}{2\mu} \nabla^2 \right] \Psi(x,t).
+\end{equation}
 $\Psi$ is analogous to our $U$ (perhaps it is something that nature wants to minimize?)
 }}
 \end{center}
@@ -381,16 +398,20 @@ $\Psi$ is analogous to our $U$ (perhaps it is something that nature wants to min
 
 In our architecture, $K$ is the state, the action that acts on $K$ is always $D$ = RNN, but $D$ can change, $\mathbf{D} \ni D$ is the space of all the weights in the RNN.
 
-$ U: \mathbf{S} \rightarrow \mathbb{R} $ is a function returning the \textbf{utility} of a mental states, which is \textit{unique} in reinforcement learning.  Yes! That is how RL learning is different from back-prop learning!  Some mental states could have higher utility than others, even though they are not the final answer state.  This corresponds to the feeling where we sometimes know our thinking is on the right track, despite that we have not reached final conclusion.
+$ U: \mathbf{S} \rightarrow \mathbb{R} $ is a function returning the \textbf{utility} of mental states, which is \textit{unique} in reinforcement learning.  Yes! That is how RL learning is different from back-prop learning!  Some mental states could have higher utility than others, even though they are not the final answer state.  This corresponds to the feeling where we sometimes know our thinking is on the right track, despite that we have not reached final conclusion.
 
 Perhaps we can use a separate neural network to approximate the utility function $U(\mbox{state})$ or $Q(\mbox{state},\mbox{action})$.
 
 Algorithm for RL:  for each cycle, we apply $D$ (say, 10 times), and we get a new $K$.  Then we calculate:
-$$ \mbox{action} = \arg\max_a Q(K,a) $$
+\begin{equation}
+\mbox{action} = \arg\max_a Q(K,a)
+\end{equation}
 which means we select the best action based on the optimal $Q$ value.  Note:  the fucntion $Q$ is learned using an external neural network, and then we need to find $Q$'s maximum, which involves \textit{another} optimization process (see appendix).  This needs to be very fast, and might be a bottleneck of the entire system.
 
 As for the learning of $Q(K,a)$, the basic \textbf{update rule} is:
-$$ Q(K,a) \;\mbox{ += }\; \eta (R(K,a) + \gamma \max_{\hat{a}} Q(K',\hat{a})) $$
+\begin{equation}
+Q(K,a) \;\mbox{ += }\; \eta (R(K,a) + \gamma \max_{\hat{a}} Q(K',\hat{a})) 
+\end{equation}
 where $\eta$ controls the learning speed.
 
 \section{Learning to listen / talk}
@@ -400,9 +421,13 @@ Learning to listen/talk can be handled by RL:
 
 \begin{enumerate}
 \item learning to listen:
-$$ \stackrel{\checkmark}{\mbox{input sentence}} \, \stackrel{?}{\longrightarrow} \, K \stackrel{{\color{red}\mbox{\footnotesize talk}}}{\longrightarrow} \, \mbox{output sentence} \, \approx_L \, \stackrel{\checkmark}{\mbox{testers}} $$
+\begin{equation}
+\stackrel{\checkmark}{\mbox{input sentence}} \, \stackrel{?}{\longrightarrow} \, K \stackrel{{\color{red}\mbox{\footnotesize talk}}}{\longrightarrow} \, \mbox{output sentence} \, \approx_L \, \stackrel{\checkmark}{\mbox{testers}}
+\end{equation}
 \item learning to talk:
-$$ \stackrel{\checkmark}{\mbox{input sentence}} \, \stackrel{{\color{red}\mbox{\footnotesize listen}}}{\longrightarrow} \, K \, \stackrel{?}{\longrightarrow} \, \mbox{output sentence} \, \approx_L \, \stackrel{\checkmark}{\mbox{testers}} $$
+\begin{equation}
+\stackrel{\checkmark}{\mbox{input sentence}} \, \stackrel{{\color{red}\mbox{\footnotesize listen}}}{\longrightarrow} \, K \, \stackrel{?}{\longrightarrow} \, \mbox{output sentence} \, \approx_L \, \stackrel{\checkmark}{\mbox{testers}}
+\end{equation}
 \end{enumerate}
 
 A $\checkmark$ means the data is known (= training set), ? is the map we want to learn, {\color{red}red} means inter-dependence (the listening and talking functions rely on each other during learning), $\approx_L$ is an \textit{external} function that compares the surface similarity of 2 natural-language sentences.  Testers are natural-language sentences used to test the correctness of listening and talking examples.
@@ -422,6 +447,8 @@ we can invoke the RL
 
 \section{Inductive learning}
 
+Now we turn to a learning mode intrinsic for RNN.
+
 For example:\\
 \tab John is Chinese $\wedge$ John wears glasses \\
 \tab Pete is Chinese $\wedge$ Pete wears glasses \\
@@ -429,37 +456,43 @@ For example:\\
 \tab Paul is Chinese $\wedge$ Paul wears glasses \\
 \tab Conclusion: all Chinese people wear glasses \\
 Expressed as a logical rule this is:
-$$ \forall X. \; \mbox{Chinese}(X) \Rightarrow \mbox{wear-glasses}(X) $$
+\begin{equation}
+\forall X. \; \mbox{Chinese}(X) \Rightarrow \mbox{wear-glasses}(X)
+\end{equation}
 but this rule is implicitly encoded in $D$ by the RNN.  For example, if $K = \mbox{``Jane is Chinese''}$, then $D$ acting on $K$ would eventually result in $K' = \mbox{``Jane wears glasses''}$.
 
 In other words, given $K_0$，$K^*$, learn $D$ such that:
-$$ K_0 \stackrel{D}{\longrightarrow} .... \; K^* $$
+\begin{equation}
+K_0 \stackrel{D}{\longrightarrow} .... \; K^*
+\end{equation}
 
 If we have the map $\mathcal{L}$, we could use $K = \mathcal{L}(\mbox{NL sentence})$ to calculate $K_0$ and $K^*$, and this would be feasible.
 
 Learning is done via back-prop, what we need is to start from $K_0$:
 \begin{eqnarray}
 K_0 \stackrel{D}{\longrightarrow} .... \; K_\vdash \nonumber \\
-K_\vdash \ge K^* \nonumber
+K_\vdash \ge K^* .
 \end{eqnarray}
-but this requires using the $\ge$ relation, discussed below.
+The second line means that $K^*$ is \textit{entailed} by $K_\vdash$.  The $\ge$ relation is discussed below.
 
 The goal is to learn $D$, to minimize the error $\mathcal{E} = K_\vdash - K^*$.
 
-The calculation of the gradient $\frac{\partial \mathcal{E}}{\partial W}$ should be feasible;  here $W$ is the weights of the RNN.
+The calculation of the gradient $\frac{\partial \mathcal{E}}{\partial W}$ should be feasible;  $W$ is the weights of the RNN.
 
 % But how do we calculate $\mathcal{E} = K_\vdash - K^*$?  There is a severe problem: we need to know the representation of $K^*$, but if $D$ is a \textit{black box}, the representation of $K^*$ would be \textit{opaque}.
 
 \section{Querying}
 
-Perhaps querying can be formulated as this problem:
+Perhaps querying can be formulated as this problem (but this may not be a good solution):
 \begin{eqnarray}
 \mbox{solve}\quad\quad D^n(\mathbf{x}) & > & K^* \nonumber \\
-K_0 & \ge & \mathbf{x} \nonumber
+K_0 & \ge & \mathbf{x}
 \end{eqnarray}
 where $\mathbf{x}$ is the variable.  We require $>$ to exceed a threshold $\epsilon$.  This is an iterative equation, which seems hopeful.
 
-If $D$ is \textbf{monotonous}, ie, $\forall \mathbf{x} \; D(\mathbf{x}) \ge \mathbf{x}$, this fact may be exploited to design faster algorithms.
+$D$ may be \textbf{monotonous}, ie, $\forall \mathbf{x} \; D(\mathbf{x}) \ge \mathbf{x}$, meaning that deduction can only lead to \textit{increases} in knowledge.  If true, it may be exploited to design faster algorithms.
+
+Another possibility for query-answering is to train it as a complex operation via RL.  Query-answering involves searching through knowledge that is encoded in the RNN.  This search is traditionally implemented as ``backward-chaining'' in logical AI.  Interestingly, there is nothing in the RNN that says that $D$ can only do forward-chaining.  So it is conceivable to train $D$ as a backward-chainer.
 
 \section{The \texorpdfstring{$\ge$}{>} relation}
 
@@ -469,8 +502,12 @@ $\ge$ is the \textbf{implication order} in logic (also similar to the \textbf{ge
 \item all men are mortal $\ge$ (all men are mortal $\wedge$ the moon is round)
 \end{itemize}
 
+It may be desirable (or even necessary) to have $\ge$ within the structure of $K$.  In the learning scenarios above, sometimes our objectives are in the form $K_1 \ge K_2$, instead of $K_1 = K_2$.
+
 In (topological) vector space theory, we can define a relation $\mathbf{v}_1 \ge \mathbf{v}_2$ between vectors, by selecting an arbitrary \textbf{cone} $C$:
-$$ \mathbf{v}_1 \ge \mathbf{v}_2 \Leftrightarrow (\mathbf{v}_1 - \mathbf{v}_2) \in C $$
+\begin{equation}
+\mathbf{v}_1 \ge \mathbf{v}_2 \Leftrightarrow (\mathbf{v}_1 - \mathbf{v}_2) \in C
+\end{equation}
 For example, on the 2D plane, $C$ could be the upper-right quadrant.
 
 I am considering:  Can we just arbitrarily select a cone in the space $\mathbf{K}$ to define $\ge$, and then let the RNN learn the logical structure of $\ge$ itself (for example, animals $\ge $ cats, $A \ge A \wedge B$, etc)?
@@ -483,21 +520,29 @@ I am considering:  Can we just arbitrarily select a cone in the space $\mathbf{K
 We can use \textbf{gradient descent} to find the (local) maxima, and repeat this over randomly-chosen starting points.  After many trials the result will approach global maximum.
 
 The gradient descent \textbf{update rule} is:
-$$ x^{k+1} = x^k - \eta \nabla y(x^k). $$
+\begin{equation}
+x^{k+1} = x^k - \eta \nabla y(x^k).
+\end{equation}
 
 This process is quite similar to back-prop, with the difference that back-prop uses the gradient $\frac{\partial \mathcal{E}}{\partial W}$ whereas here we use the gradient $\frac{\partial y}{\partial x}$.
 
 For each layer,
-$$ y_j = \sigmoid( \sum W_{ji} x_i ) $$
+\begin{equation}
+y_j = \sigmoid( \sum W_{ji} x_i )
+\end{equation}
 and the overall output is:
-$$ y = y_J \circ y_{J-1} \circ .... \, y_0 (x). $$
+\begin{equation}
+y = y_J \circ y_{J-1} \circ .... \, y_0 (x).
+\end{equation}
 $J$ is the number of hidden layers.
 
 We then calculate
-$$ \nabla y = \left[ \frac{\partial y}{\partial x_l} \right] =
+\begin{equation}
+\nabla y = \left[ \frac{\partial y}{\partial x_l} \right] =
 \frac{\partial y_J}{\partial y_{J-1}}
 \frac{\partial y_{J-1}}{\partial y_{J-2}} .... \,
-\frac{\partial y_0}{\partial x_l} $$
+\frac{\partial y_0}{\partial x_l}
+\end{equation}
 % $$ =
 % \frac{\partial y_J}{\partial y_{J-1}}(y_{J-1})
 % \frac{\partial y_{J-1}}{\partial y_{J-2}}(y_{J-2}) .... \,
