@@ -77,7 +77,7 @@
 \newcommand*\sadface{\includegraphics[scale=0.25]{face-sad.png}}
 \newcommand*\smiley{\includegraphics[scale=0.5]{smiley.jpg}}
 
-\title{\textcolor{blue}{Genifer 5.3 theoretical notes}}
+\title{\textcolor{blue}{Genifer 5.3 design notes}}
 \author{YKY (甄景贤)}
 %% \date{30 June 2015}
 %% \institute{}
@@ -357,7 +357,7 @@ Let's review the Bellman equation:
 \begin{equation}
  U(S) = \max_a \{ R(S,a) + \gamma U(S') \}
 \end{equation}
-where $U$ = utility, $R$ = reward, $\gamma$ = discount factor, $a$ = action, $S \stackrel{a}{\mapsto} S'$.  This is a recursive equation, expressing the relation between the optimal utility of the current state $U(A)$ and the optimal utility of the next state $U(S')$.
+where $U$ = utility, $R$ = reward, $\gamma$ = discount factor, $a$ = action, with state transition $S \stackrel{a}{\mapsto} S'$.  This is a recursive equation, expressing the relation between the optimal utility of the current state $U(S)$ and the optimal utility of the next state $U(S')$.
 
 \begin{figure}[!h!t!b!p]
 \begin{center}
